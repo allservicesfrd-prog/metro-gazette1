@@ -355,6 +355,58 @@
     display:flex;align-items:center;gap:5px;padding:8px 10px !important;
   }
   .unlock-status .dot-lit{width:6px;height:6px;border-radius:50%;background:var(--gold);display:inline-block;}
+
+  /* Article images */
+  .lead-image{width:100%;max-height:380px;object-fit:cover;margin-bottom:16px;display:block;}
+  .card-image{width:100%;height:150px;object-fit:cover;margin-bottom:10px;display:block;}
+  .modal-hero-image{width:100%;max-height:420px;object-fit:cover;margin-bottom:20px;display:block;}
+
+  /* Image upload field */
+  .image-upload-wrap input[type=file]{
+    font-family:'Inter',sans-serif;font-size:12.5px;padding:9px;border:1px dashed var(--rule);
+    width:100%;background:#fff;cursor:pointer;box-sizing:border-box;
+  }
+  .image-preview{max-width:100%;max-height:180px;border:1px solid var(--rule);display:block;margin-top:10px;object-fit:cover;}
+  .image-status{font-family:'Inter',sans-serif;font-size:12px;color:var(--gold-dark);margin-top:6px;}
+  .remove-image-btn{
+    background:none;border:1px solid var(--rule);padding:6px 12px;margin-top:8px;
+    font-family:'Inter',sans-serif;font-size:12px;cursor:pointer;color:#555;border-radius:2px;
+  }
+
+  /* Business Spotlight */
+  .spotlight-header{
+    display:flex;justify-content:space-between;align-items:center;
+    border-bottom:1px solid var(--gold);padding-bottom:8px;margin-bottom:14px;
+  }
+  .spotlight-header h3{margin:0;border:none;padding:0;}
+  .add-spotlight-btn{
+    background:none;border:1px solid var(--gold);color:var(--gold);
+    font-family:'Inter',sans-serif;font-size:11px;padding:4px 9px;cursor:pointer;border-radius:2px;
+    white-space:nowrap;
+  }
+  .add-spotlight-btn:hover{background:var(--gold);color:var(--navy);}
+  .spotlight-item{
+    display:flex;gap:10px;align-items:center;
+    padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.14);
+    cursor:pointer;
+  }
+  .spotlight-item:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+  .spotlight-thumb{
+    width:44px;height:44px;flex:none;background-size:cover;background-position:center;
+    background-color:rgba(255,255,255,0.12);border-radius:3px;
+  }
+  .spotlight-info{flex:1;min-width:0;}
+  .spotlight-name{font-family:'Inter',sans-serif;font-weight:700;font-size:13.5px;color:#fff;}
+  .spotlight-blurb{
+    font-size:12px;color:#C9D2E3;overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;font-family:'Inter',sans-serif;
+  }
+  .spotlight-edit{
+    background:none;border:none;color:var(--gold);cursor:pointer;font-size:14px;flex:none;padding:4px;
+  }
+  .spotlight-empty{
+    font-family:'Inter',sans-serif;font-size:13px;color:#C9D2E3;cursor:default;
+  }
 </style>
 </head>
 <body>
@@ -406,6 +458,13 @@
         <h3>Latest Headlines</h3>
         <div id="sidebarList"></div>
       </div>
+      <div class="sidebar-box">
+        <div class="spotlight-header">
+          <h3>Business Spotlight</h3>
+          <button class="add-spotlight-btn" id="addSpotlightBtn">🔒 + Add</button>
+        </div>
+        <div id="spotlightList"></div>
+      </div>
       <div class="subscribe-box">
         <h3>Get the Morning Edition</h3>
         <p>Metro Gazette headlines, straight to your inbox. (Preview only — no email is sent.)</p>
@@ -446,10 +505,27 @@ const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 const auth = getAuth(fbApp);
 const articlesRef = collection(db, "articles");
+const spotlightsRef = collection(db, "spotlights");
+
+const CLOUDINARY_CLOUD_NAME = "kukx1d9k";
+const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
+
+async function uploadToCloudinary(file){
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+    method: 'POST', body: formData
+  });
+  if(!res.ok) throw new Error('Upload failed');
+  const data = await res.json();
+  return data.secure_url;
+}
 
 (function(){
   const CATS = ["Local","Business","Sports","Opinion","World"];
   let articles = [];
+  let spotlights = [];
   let activeCat = "All";
   let isUnlocked = false;
   let currentUserEmail = "";
@@ -526,6 +602,47 @@ const articlesRef = collection(db, "articles");
     }
   }
 
+  // ---------- business spotlight firestore ----------
+  function subscribeSpotlights(){
+    const q = query(spotlightsRef, orderBy("date", "desc"));
+    onSnapshot(q, (snapshot)=>{
+      spotlights = snapshot.docs.map(d=> ({ id: d.id, ...d.data() }));
+      renderSpotlights();
+    }, (err)=>{
+      // fail quietly — spotlight box just stays empty
+    });
+  }
+
+  async function createSpotlight(record){
+    try{
+      await addDoc(spotlightsRef, record);
+      return true;
+    }catch(e){
+      toast('Could not publish — please try again.');
+      return false;
+    }
+  }
+
+  async function updateSpotlight(id, record){
+    try{
+      await updateDoc(doc(db, "spotlights", id), record);
+      return true;
+    }catch(e){
+      toast('Could not save changes — please try again.');
+      return false;
+    }
+  }
+
+  async function removeSpotlight(id){
+    try{
+      await deleteDoc(doc(db, "spotlights", id));
+      return true;
+    }catch(e){
+      toast('Could not delete — please try again.');
+      return false;
+    }
+  }
+
   // ---------- empty-state copy shown when no articles exist yet ----------
   const WELCOME_HINT = "No stories published yet. Log in and click \"Write Article\" to publish the first one.";
 
@@ -565,6 +682,40 @@ const articlesRef = collection(db, "articles");
     });
   }
 
+  function renderSpotlights(){
+    const list = document.getElementById('spotlightList');
+    if(!list) return;
+    if(!spotlights.length){
+      list.innerHTML = '<div class="spotlight-item spotlight-empty">No businesses featured yet.</div>';
+      return;
+    }
+    list.innerHTML = spotlights.map(s=>`
+      <div class="spotlight-item" data-visit="${s.id}">
+        <div class="spotlight-thumb" style="${s.imageUrl ? `background-image:url('${s.imageUrl}')` : ''}"></div>
+        <div class="spotlight-info">
+          <div class="spotlight-name">${escapeHtml(s.name)}</div>
+          <div class="spotlight-blurb">${escapeHtml(s.blurb || '')}</div>
+        </div>
+        ${isUnlocked ? `<button class="spotlight-edit" data-edit="${s.id}" title="Edit">✎</button>` : ''}
+      </div>
+    `).join('');
+
+    list.querySelectorAll('[data-visit]').forEach(el=>{
+      el.addEventListener('click', (e)=>{
+        if(e.target.closest('[data-edit]')) return;
+        const s = spotlights.find(x=>x.id===el.getAttribute('data-visit'));
+        if(s && s.link) window.open(s.link, '_blank', 'noopener');
+      });
+    });
+    list.querySelectorAll('[data-edit]').forEach(el=>{
+      el.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const s = spotlights.find(x=>x.id===el.getAttribute('data-edit'));
+        if(s) requireUnlock(()=> openSpotlightEditor(s));
+      });
+    });
+  }
+
   function escapeHtml(s){
     return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
@@ -572,6 +723,7 @@ const articlesRef = collection(db, "articles");
   function renderLead(a){
     return `
       <div class="lead-story" data-open-id="${a.id}">
+        ${a.imageUrl ? `<img class="lead-image" src="${a.imageUrl}" alt="">` : ''}
         <span class="eyebrow">${a.category} • Featured</span>
         <h1>${escapeHtml(a.title)}</h1>
         <p class="dek">${escapeHtml(a.dek)}</p>
@@ -583,6 +735,7 @@ const articlesRef = collection(db, "articles");
   function renderCard(a){
     return `
       <div class="article-card" data-open-id="${a.id}">
+        ${a.imageUrl ? `<img class="card-image" src="${a.imageUrl}" alt="">` : ''}
         <span class="eyebrow">${a.category}</span>
         <h2>${escapeHtml(a.title)}</h2>
         <p>${escapeHtml(excerpt(a.dek, 110))}</p>
@@ -600,6 +753,7 @@ const articlesRef = collection(db, "articles");
       <div class="modal-overlay" id="readerOverlay">
         <div class="modal">
           <button class="modal-close" aria-label="Close" id="readerClose">×</button>
+          ${a.imageUrl ? `<img class="modal-hero-image" src="${a.imageUrl}" alt="">` : ''}
           <span class="eyebrow">${a.category}</span>
           <h1>${escapeHtml(a.title)}</h1>
           <div class="byline" style="margin-bottom:18px;">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
@@ -689,20 +843,25 @@ const articlesRef = collection(db, "articles");
   function updateUnlockIndicator(){
     const statusBtn = document.getElementById('unlockStatus');
     const writeBtn = document.getElementById('writeBtn');
+    const addSpotlightBtn = document.getElementById('addSpotlightBtn');
     if(isUnlocked){
       statusBtn.style.display = 'inline-flex';
       statusBtn.innerHTML = `<span class="dot-lit"></span>${escapeHtml(currentUserEmail)} · Log out`;
       writeBtn.textContent = '✎ Write Article';
+      addSpotlightBtn.textContent = '+ Add';
     } else {
       statusBtn.style.display = 'none';
       writeBtn.textContent = '🔒 Write Article';
+      addSpotlightBtn.textContent = '🔒 + Add';
     }
+    renderSpotlights();
   }
 
   // ---------- editor modal ----------
   function openEditor(existing){
     const isEdit = !!existing;
-    const a = existing || {id:null, title:'', category:'Local', author:'', dek:'', body:'', date:new Date().toISOString()};
+    const a = existing || {id:null, title:'', category:'Local', author:'', dek:'', body:'', imageUrl:'', date:new Date().toISOString()};
+    let pendingImageUrl = a.imageUrl || null;
     const root = document.getElementById('modalRoot');
     root.innerHTML = `
       <div class="modal-overlay" id="editorOverlay">
@@ -722,6 +881,13 @@ const articlesRef = collection(db, "articles");
           <div class="editor-field">
             <label for="fAuthor">Byline (your name)</label>
             <input id="fAuthor" type="text" value="${escapeAttr(a.author)}" placeholder="e.g. Jordan Reyes">
+          </div>
+          <div class="editor-field image-upload-wrap">
+            <label for="fImage">Photo (optional)</label>
+            <input id="fImage" type="file" accept="image/*">
+            <div id="imageStatus" class="image-status" style="display:none;"></div>
+            <img id="imagePreview" class="image-preview" src="${a.imageUrl || ''}" style="${a.imageUrl ? '' : 'display:none;'}" alt="">
+            <button type="button" id="removeImageBtn" class="remove-image-btn" style="${a.imageUrl ? '' : 'display:none;'}">Remove photo</button>
           </div>
           <div class="editor-field">
             <label for="fDek">Deck (one or two sentence summary)</label>
@@ -743,6 +909,36 @@ const articlesRef = collection(db, "articles");
     });
     document.getElementById('editorClose').addEventListener('click', closeModal);
     document.getElementById('cancelEditorBtn').addEventListener('click', closeModal);
+
+    const fileInput = document.getElementById('fImage');
+    const preview = document.getElementById('imagePreview');
+    const status = document.getElementById('imageStatus');
+    const removeBtn = document.getElementById('removeImageBtn');
+
+    fileInput.addEventListener('change', async ()=>{
+      const file = fileInput.files[0];
+      if(!file) return;
+      status.style.display = 'block';
+      status.textContent = 'Uploading photo…';
+      try{
+        const url = await uploadToCloudinary(file);
+        pendingImageUrl = url;
+        preview.src = url;
+        preview.style.display = 'block';
+        removeBtn.style.display = 'inline-block';
+        status.style.display = 'none';
+      }catch(e){
+        status.textContent = 'Upload failed — try a different photo.';
+      }
+    });
+
+    removeBtn.addEventListener('click', ()=>{
+      pendingImageUrl = null;
+      fileInput.value = '';
+      preview.style.display = 'none';
+      removeBtn.style.display = 'none';
+    });
+
     document.getElementById('saveArticleBtn').addEventListener('click', async ()=>{
       const title = document.getElementById('fTitle').value.trim();
       const category = document.getElementById('fCategory').value;
@@ -761,6 +957,7 @@ const articlesRef = collection(db, "articles");
         author,
         dek: dek || excerpt(body, 140),
         body,
+        imageUrl: pendingImageUrl || null,
         date: isEdit ? a.date : new Date().toISOString()
       };
 
@@ -783,6 +980,121 @@ const articlesRef = collection(db, "articles");
     return escapeHtml(s || '');
   }
 
+  // ---------- business spotlight editor modal ----------
+  function openSpotlightEditor(existing){
+    const isEdit = !!existing;
+    const s = existing || {id:null, name:'', link:'', blurb:'', imageUrl:'', date:new Date().toISOString()};
+    let pendingImageUrl = s.imageUrl || null;
+    const root = document.getElementById('modalRoot');
+    root.innerHTML = `
+      <div class="modal-overlay" id="spotlightEditorOverlay">
+        <div class="modal">
+          <button class="modal-close" aria-label="Close" id="spotlightEditorClose">×</button>
+          <h1 style="font-size:24px;">${isEdit ? 'Edit Business' : 'Add Business Spotlight'}</h1>
+          <div class="editor-field">
+            <label for="fBizName">Business name</label>
+            <input id="fBizName" type="text" value="${escapeAttr(s.name)}" placeholder="e.g. Corner Bakery">
+          </div>
+          <div class="editor-field">
+            <label for="fBizLink">Website or social link</label>
+            <input id="fBizLink" type="url" value="${escapeAttr(s.link)}" placeholder="https://...">
+          </div>
+          <div class="editor-field image-upload-wrap">
+            <label for="fBizImage">Photo / logo (optional)</label>
+            <input id="fBizImage" type="file" accept="image/*">
+            <div id="bizImageStatus" class="image-status" style="display:none;"></div>
+            <img id="bizImagePreview" class="image-preview" src="${s.imageUrl || ''}" style="${s.imageUrl ? '' : 'display:none;'}" alt="">
+            <button type="button" id="removeBizImageBtn" class="remove-image-btn" style="${s.imageUrl ? '' : 'display:none;'}">Remove photo</button>
+          </div>
+          <div class="editor-field">
+            <label for="fBizBlurb">Short blurb</label>
+            <textarea id="fBizBlurb" style="min-height:70px;" placeholder="What they offer, in a sentence or two...">${escapeHtml(s.blurb)}</textarea>
+          </div>
+          <div>
+            <button class="editor-save" id="saveBizBtn">${isEdit ? 'Save Changes' : 'Publish'}</button>
+            <button class="editor-cancel" id="cancelBizEditorBtn">Cancel</button>
+            ${isEdit ? `<button class="editor-cancel" id="deleteBizBtn" style="color:#a33;border-color:#a33;">Delete</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('spotlightEditorOverlay').addEventListener('click', (e)=>{
+      if(e.target.id === 'spotlightEditorOverlay') closeModal();
+    });
+    document.getElementById('spotlightEditorClose').addEventListener('click', closeModal);
+    document.getElementById('cancelBizEditorBtn').addEventListener('click', closeModal);
+
+    const fileInput = document.getElementById('fBizImage');
+    const preview = document.getElementById('bizImagePreview');
+    const status = document.getElementById('bizImageStatus');
+    const removeBtn = document.getElementById('removeBizImageBtn');
+
+    fileInput.addEventListener('change', async ()=>{
+      const file = fileInput.files[0];
+      if(!file) return;
+      status.style.display = 'block';
+      status.textContent = 'Uploading photo…';
+      try{
+        const url = await uploadToCloudinary(file);
+        pendingImageUrl = url;
+        preview.src = url;
+        preview.style.display = 'block';
+        removeBtn.style.display = 'inline-block';
+        status.style.display = 'none';
+      }catch(e){
+        status.textContent = 'Upload failed — try a different photo.';
+      }
+    });
+
+    removeBtn.addEventListener('click', ()=>{
+      pendingImageUrl = null;
+      fileInput.value = '';
+      preview.style.display = 'none';
+      removeBtn.style.display = 'none';
+    });
+
+    if(isEdit){
+      document.getElementById('deleteBizBtn').addEventListener('click', async ()=>{
+        if(confirm('Remove "'+s.name+'" from the spotlight?')){
+          const ok = await removeSpotlight(s.id);
+          if(ok){ closeModal(); toast('Business removed.'); }
+        }
+      });
+    }
+
+    document.getElementById('saveBizBtn').addEventListener('click', async ()=>{
+      const name = document.getElementById('fBizName').value.trim();
+      const link = document.getElementById('fBizLink').value.trim();
+      const blurb = document.getElementById('fBizBlurb').value.trim();
+
+      if(!name || !link){
+        toast('A business name and link are required.');
+        return;
+      }
+
+      const record = {
+        name,
+        link,
+        blurb,
+        imageUrl: pendingImageUrl || null,
+        date: isEdit ? s.date : new Date().toISOString()
+      };
+
+      const saveBtn = document.getElementById('saveBizBtn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+
+      const ok = isEdit ? await updateSpotlight(s.id, record) : await createSpotlight(record);
+      if(ok){
+        closeModal();
+        toast(isEdit ? 'Business updated.' : 'Business published.');
+      } else {
+        saveBtn.disabled = false;
+        saveBtn.textContent = isEdit ? 'Save Changes' : 'Publish';
+      }
+    });
+  }
+
   // ---------- nav ----------
   document.getElementById('sectionNav').addEventListener('click', (e)=>{
     const btn = e.target.closest('button[data-cat]');
@@ -800,6 +1112,8 @@ const articlesRef = collection(db, "articles");
       toast('Logged out.');
     }
   });
+
+  document.getElementById('addSpotlightBtn').addEventListener('click', ()=> requireUnlock(()=> openSpotlightEditor(null)));
 
   document.getElementById('subBtn').addEventListener('click', ()=>{
     const val = document.getElementById('subEmail').value.trim();
@@ -819,6 +1133,7 @@ const articlesRef = collection(db, "articles");
   });
 
   subscribeArticles();
+  subscribeSpotlights();
 
 })();
 </script>
