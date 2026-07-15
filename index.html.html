@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metro Gazette — News That Matters</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,600&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#1B2A4A;
+    --navy-deep:#101B33;
+    --gold:#C9982F;
+    --gold-dark:#9C7420;
+    --cream:#FAF6EE;
+    --ink:#1A1A1A;
+    --rule:#D9D0BE;
+    --card:#FFFFFF;
+    --navy-tint:#E8ECF3;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--cream);
+    color:var(--ink);
+    font-family:'Source Serif 4', serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none;}
+  .sans{font-family:'Inter',sans-serif;}
+
+  /* Focus visibility */
+  a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible{
+    outline:2px solid var(--gold-dark);
+    outline-offset:2px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important;}
+  }
+
+  /* ===== Top utility bar ===== */
+  .utility-bar{
+    background:var(--navy-deep);
+    color:#C9D2E3;
+    font-family:'Inter',sans-serif;
+    font-size:12px;
+    letter-spacing:0.04em;
+    padding:6px 20px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .utility-bar .clock-dot{
+    display:inline-block;width:6px;height:6px;border-radius:50%;
+    background:var(--gold);margin-right:6px;
+    animation:pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{opacity:1;} 50%{opacity:0.35;}
+  }
+
+  /* ===== Masthead ===== */
+  .masthead{
+    background:var(--cream);
+    border-bottom:3px solid var(--navy);
+    padding:28px 20px 18px;
+    text-align:center;
+    position:relative;
+  }
+  .masthead-inner{
+    max-width:1100px;margin:0 auto;
+  }
+  .masthead-name{
+    font-family:'Playfair Display',serif;
+    font-weight:900;
+    font-size:clamp(36px, 7vw, 68px);
+    letter-spacing:0.01em;
+    color:var(--navy);
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .masthead-name .accent{color:var(--gold-dark);}
+  .clock-icon{
+    width:0.78em;height:0.78em;
+    border:5px solid var(--navy);
+    border-radius:50%;
+    position:relative;
+    flex:none;
+  }
+  .clock-icon::before, .clock-icon::after{
+    content:'';
+    position:absolute;
+    background:var(--navy);
+    top:50%;left:50%;
+    transform-origin:0 0;
+  }
+  .clock-icon::before{width:26%;height:9%;transform:translate(0,-50%) rotate(-45deg);}
+  .clock-icon::after{width:34%;height:9%;transform:translate(0,-50%) rotate(75deg);}
+  .masthead-tagline{
+    font-family:'Inter',sans-serif;
+    font-style:italic;
+    font-size:14px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--navy);
+    margin-top:8px;
+  }
+  .masthead-tagline .rule{
+    display:inline-block;width:34px;height:1px;background:var(--gold-dark);
+    vertical-align:middle;margin:0 10px;
+  }
+
+  /* Dateline strip - signature element */
+  .dateline{
+    background:var(--navy);
+    color:var(--cream);
+    font-family:'Inter',sans-serif;
+    font-size:12.5px;
+    padding:9px 20px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:22px;
+    flex-wrap:wrap;
+    letter-spacing:0.03em;
+    border-bottom:1px solid var(--gold);
+  }
+  .dateline b{color:var(--gold);font-weight:700;}
+
+  /* ===== Nav ===== */
+  nav.section-nav{
+    background:var(--card);
+    border-bottom:1px solid var(--rule);
+    position:sticky;top:0;z-index:20;
+  }
+  .section-nav-inner{
+    max-width:1100px;margin:0 auto;
+    display:flex;gap:0;
+    overflow-x:auto;
+    font-family:'Inter',sans-serif;
+  }
+  .section-nav-inner button{
+    background:none;border:none;cursor:pointer;
+    padding:14px 18px;
+    font-size:13px;font-weight:600;letter-spacing:0.06em;
+    text-transform:uppercase;color:var(--navy);
+    white-space:nowrap;
+    border-bottom:3px solid transparent;
+    transition:border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .section-nav-inner button:hover{background:var(--navy-tint);}
+  .section-nav-inner button.active{border-bottom-color:var(--gold-dark);color:var(--gold-dark);}
+  .section-nav-inner .spacer{flex:1;}
+  .write-btn{
+    background:var(--navy) !important;color:var(--cream) !important;
+    margin:8px 10px 8px 0 !important;
+    border-radius:2px;
+    padding:8px 16px !important;
+  }
+  .write-btn:hover{background:var(--navy-deep) !important;}
+
+  /* ===== Layout ===== */
+  main{max-width:1100px;margin:0 auto;padding:30px 20px 60px;}
+  .layout{display:grid;grid-template-columns:2fr 1fr;gap:36px;align-items:start;}
+  @media (max-width:800px){.layout{grid-template-columns:1fr;}}
+
+  .eyebrow{
+    font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;
+    letter-spacing:0.12em;text-transform:uppercase;color:var(--gold-dark);
+    margin-bottom:6px;display:block;
+  }
+
+  /* Lead story */
+  .lead-story{
+    border-bottom:2px solid var(--navy);
+    padding-bottom:28px;margin-bottom:30px;
+    cursor:pointer;
+  }
+  .lead-story h1{
+    font-family:'Playfair Display',serif;
+    font-weight:800;font-size:clamp(28px,4vw,42px);
+    line-height:1.08;color:var(--ink);margin:0 0 12px;
+  }
+  .lead-story .dek{
+    font-size:18px;line-height:1.55;color:#3a3a3a;margin:0 0 14px;
+  }
+  .byline{
+    font-family:'Inter',sans-serif;font-size:12.5px;color:#6b6b6b;
+    letter-spacing:0.02em;
+  }
+  .byline b{color:var(--navy);}
+
+  /* Article grid */
+  .grid-articles{
+    display:grid;grid-template-columns:1fr 1fr;gap:26px 30px;
+  }
+  @media (max-width:560px){.grid-articles{grid-template-columns:1fr;}}
+  .article-card{
+    border-top:3px solid var(--navy);
+    padding-top:12px;cursor:pointer;
+  }
+  .article-card h2{
+    font-family:'Playfair Display',serif;font-weight:700;
+    font-size:21px;line-height:1.2;margin:0 0 8px;color:var(--ink);
+  }
+  .article-card:hover h2{color:var(--gold-dark);}
+  .article-card p{font-size:15px;line-height:1.5;color:#444;margin:0 0 8px;}
+
+  /* Sidebar */
+  .sidebar-box{
+    background:var(--navy);color:var(--cream);
+    padding:20px;margin-bottom:24px;
+  }
+  .sidebar-box h3{
+    font-family:'Playfair Display',serif;font-size:19px;margin:0 0 14px;
+    border-bottom:1px solid var(--gold);padding-bottom:8px;
+  }
+  .sidebar-item{
+    font-size:14.5px;line-height:1.4;margin-bottom:12px;
+    padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.14);
+    cursor:pointer;
+  }
+  .sidebar-item:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+  .sidebar-item .idx{color:var(--gold);font-family:'Inter',sans-serif;font-weight:700;margin-right:6px;}
+  .sidebar-item:hover{color:var(--gold);}
+
+  .subscribe-box{
+    border:2px solid var(--navy);padding:20px;text-align:center;
+  }
+  .subscribe-box h3{
+    font-family:'Playfair Display',serif;font-size:18px;margin:0 0 8px;color:var(--navy);
+  }
+  .subscribe-box p{font-size:13.5px;color:#555;margin:0 0 14px;font-family:'Inter',sans-serif;}
+  .subscribe-box input{
+    width:100%;padding:9px 10px;border:1px solid var(--rule);margin-bottom:8px;
+    font-family:'Inter',sans-serif;font-size:13px;
+  }
+  .subscribe-box button{
+    width:100%;padding:10px;background:var(--gold-dark);color:#fff;border:none;
+    font-family:'Inter',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.05em;
+    text-transform:uppercase;cursor:pointer;
+  }
+  .subscribe-box button:hover{background:var(--navy);}
+
+  /* Empty state */
+  .empty-state{
+    text-align:center;padding:60px 20px;color:#777;
+    font-family:'Inter',sans-serif;
+  }
+  .empty-state h2{font-family:'Playfair Display',serif;color:var(--navy);margin-bottom:8px;}
+
+  /* Footer */
+  footer{
+    background:var(--navy-deep);color:#B7C0D6;
+    padding:30px 20px;text-align:center;
+    font-family:'Inter',sans-serif;font-size:12.5px;
+  }
+  footer .fname{font-family:'Playfair Display',serif;color:var(--gold);font-size:18px;display:block;margin-bottom:6px;}
+
+  /* ===== Modal: article reader ===== */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(16,27,51,0.65);
+    display:flex;align-items:flex-start;justify-content:center;
+    padding:40px 16px;overflow-y:auto;z-index:100;
+  }
+  .modal{
+    background:var(--cream);max-width:720px;width:100%;
+    padding:36px 36px 40px;position:relative;
+    border-top:4px solid var(--navy);
+  }
+  .modal-close{
+    position:absolute;top:14px;right:16px;background:none;border:none;
+    font-size:26px;line-height:1;cursor:pointer;color:var(--navy);
+    font-family:'Inter',sans-serif;
+  }
+  .modal h1{
+    font-family:'Playfair Display',serif;font-size:clamp(26px,4vw,36px);
+    color:var(--ink);margin:6px 0 12px;line-height:1.1;
+  }
+  .modal .modal-body{font-size:17px;line-height:1.7;color:#2a2a2a;white-space:pre-wrap;}
+  .modal .modal-actions{margin-top:24px;padding-top:16px;border-top:1px solid var(--rule);
+    display:flex;gap:10px;font-family:'Inter',sans-serif;}
+  .modal .modal-actions button{
+    font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;
+    padding:8px 14px;cursor:pointer;border:1px solid var(--navy);background:none;color:var(--navy);
+  }
+  .modal .modal-actions button.danger{border-color:#a33;color:#a33;}
+  .modal .modal-actions button:hover{background:var(--navy);color:#fff;}
+  .modal .modal-actions button.danger:hover{background:#a33;color:#fff;}
+
+  /* ===== Editor modal ===== */
+  .editor-field{margin-bottom:16px;}
+  .editor-field label{
+    display:block;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;
+    letter-spacing:0.06em;text-transform:uppercase;color:var(--navy);margin-bottom:6px;
+  }
+  .editor-field input, .editor-field textarea, .editor-field select{
+    width:100%;padding:10px 12px;border:1px solid var(--rule);
+    font-family:'Source Serif 4',serif;font-size:15px;background:#fff;
+    border-radius:2px;
+  }
+  .editor-field select{font-family:'Inter',sans-serif;}
+  .editor-field textarea{resize:vertical;min-height:160px;line-height:1.5;}
+  .editor-save{
+    background:var(--gold-dark);color:#fff;border:none;padding:11px 22px;
+    font-family:'Inter',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.05em;
+    text-transform:uppercase;cursor:pointer;border-radius:2px;
+  }
+  .editor-save:hover{background:var(--navy);}
+  .editor-cancel{
+    background:none;border:1px solid var(--rule);padding:11px 18px;margin-left:8px;
+    font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;color:#555;border-radius:2px;
+  }
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--navy);color:#fff;padding:12px 22px;
+    font-family:'Inter',sans-serif;font-size:13.5px;
+    border-left:3px solid var(--gold);z-index:200;
+    box-shadow:0 6px 20px rgba(0,0,0,0.25);
+  }
+
+  .loading-row{
+    text-align:center;padding:40px;color:#999;font-family:'Inter',sans-serif;font-size:13px;
+  }
+
+  /* Password gate */
+  .gate-modal{max-width:380px;}
+  .gate-modal .lock-icon{
+    width:34px;height:34px;margin:0 auto 14px;border:3px solid var(--navy);border-radius:6px;
+    position:relative;
+  }
+  .gate-modal .lock-icon::before{
+    content:'';position:absolute;top:-16px;left:50%;transform:translateX(-50%);
+    width:18px;height:18px;border:3px solid var(--navy);border-bottom:none;
+    border-radius:10px 10px 0 0;
+  }
+  .gate-modal h1{font-size:20px;text-align:center;}
+  .gate-modal p.gate-sub{
+    font-family:'Inter',sans-serif;font-size:13px;color:#666;text-align:center;margin:0 0 20px;
+  }
+  .gate-error{
+    color:#a33;font-family:'Inter',sans-serif;font-size:12.5px;margin-top:-8px;margin-bottom:14px;display:none;
+  }
+  .unlock-status{
+    font-family:'Inter',sans-serif;font-size:11.5px;color:var(--gold);
+    display:flex;align-items:center;gap:5px;padding:8px 10px !important;
+  }
+  .unlock-status .dot-lit{width:6px;height:6px;border-radius:50%;background:var(--gold);display:inline-block;}
+</style>
+</head>
+<body>
+
+<div class="utility-bar">
+  <span><span class="clock-dot"></span><span id="liveClock">—</span></span>
+  <span id="editionLabel" class="sans">City Edition</span>
+</div>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <div class="masthead-name">
+      <span class="clock-icon" aria-hidden="true"></span>
+      METRO <span class="accent">GAZETTE</span>
+    </div>
+    <div class="masthead-tagline"><span class="rule"></span>News That Matters<span class="rule"></span></div>
+  </div>
+</header>
+
+<div class="dateline" id="datelineStrip">
+  <span id="datelineDate">—</span>
+  <span>•</span>
+  <span><b id="articleCount">0</b> stories published</span>
+</div>
+
+<nav class="section-nav">
+  <div class="section-nav-inner sans" id="sectionNav">
+    <button data-cat="All" class="active">All</button>
+    <button data-cat="Local">Local</button>
+    <button data-cat="Business">Business</button>
+    <button data-cat="Sports">Sports</button>
+    <button data-cat="Opinion">Opinion</button>
+    <button data-cat="World">World</button>
+    <div class="spacer"></div>
+    <button class="unlock-status" id="unlockStatus" style="display:none;"><span class="dot-lit"></span>Editor unlocked</button>
+    <button class="write-btn" id="writeBtn">🔒 Write Article</button>
+  </div>
+</nav>
+
+<main>
+  <div id="loadingRow" class="loading-row">Loading the presses…</div>
+  <div class="layout" id="layoutRoot" style="display:none;">
+    <div>
+      <div id="leadSlot"></div>
+      <div class="grid-articles" id="gridSlot"></div>
+    </div>
+    <div>
+      <div class="sidebar-box">
+        <h3>Latest Headlines</h3>
+        <div id="sidebarList"></div>
+      </div>
+      <div class="subscribe-box">
+        <h3>Get the Morning Edition</h3>
+        <p>Metro Gazette headlines, straight to your inbox. (Preview only — no email is sent.)</p>
+        <input type="email" placeholder="you@email.com" id="subEmail">
+        <button id="subBtn">Subscribe</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <span class="fname">METRO GAZETTE</span>
+  Published locally. Written honestly. — News That Matters
+</footer>
+
+<div id="modalRoot"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
+  onSnapshot, query, orderBy
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import {
+  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAg6igpcCyd9sqQsAoO4dxGGnNDMt5ZQ7c",
+  authDomain: "metro-gazette.firebaseapp.com",
+  projectId: "metro-gazette",
+  storageBucket: "metro-gazette.firebasestorage.app",
+  messagingSenderId: "330532123264",
+  appId: "1:330532123264:web:bf8ca274522bf481936c65"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+const auth = getAuth(fbApp);
+const articlesRef = collection(db, "articles");
+
+(function(){
+  const CATS = ["Local","Business","Sports","Opinion","World"];
+  let articles = [];
+  let activeCat = "All";
+  let isUnlocked = false;
+  let currentUserEmail = "";
+
+  // ---------- clock / dateline ----------
+  function updateClock(){
+    const now = new Date();
+    document.getElementById('liveClock').textContent = now.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  }
+  function updateDateline(){
+    const now = new Date();
+    document.getElementById('datelineDate').textContent = now.toLocaleDateString([], {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  }
+  updateClock(); updateDateline();
+  setInterval(updateClock, 15000);
+
+  function toast(msg){
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(), 2600);
+  }
+
+  function excerpt(text, n){
+    const clean = text.trim();
+    return clean.length > n ? clean.slice(0,n).trim() + '…' : clean;
+  }
+
+  function fmtDate(iso){
+    return new Date(iso).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
+  }
+
+  // ---------- firestore ----------
+  function subscribeArticles(){
+    const q = query(articlesRef, orderBy("date", "desc"));
+    onSnapshot(q, (snapshot)=>{
+      articles = snapshot.docs.map(d=> ({ id: d.id, ...d.data() }));
+      document.getElementById('loadingRow').style.display = 'none';
+      document.getElementById('layoutRoot').style.display = 'grid';
+      render();
+    }, (err)=>{
+      document.getElementById('loadingRow').textContent = 'Could not load articles. Check your connection and try again.';
+    });
+  }
+
+  async function createArticle(record){
+    try{
+      await addDoc(articlesRef, record);
+      return true;
+    }catch(e){
+      toast('Could not publish — please try again.');
+      return false;
+    }
+  }
+
+  async function updateArticle(id, record){
+    try{
+      await updateDoc(doc(db, "articles", id), record);
+      return true;
+    }catch(e){
+      toast('Could not save changes — please try again.');
+      return false;
+    }
+  }
+
+  async function removeArticle(id){
+    try{
+      await deleteDoc(doc(db, "articles", id));
+      return true;
+    }catch(e){
+      toast('Could not delete — please try again.');
+      return false;
+    }
+  }
+
+  // ---------- empty-state copy shown when no articles exist yet ----------
+  const WELCOME_HINT = "No stories published yet. Log in and click \"Write Article\" to publish the first one.";
+
+  // ---------- rendering ----------
+  function render(){
+    document.getElementById('articleCount').textContent = articles.length;
+
+    const filtered = activeCat === "All" ? articles : articles.filter(a=>a.category===activeCat);
+
+    const leadSlot = document.getElementById('leadSlot');
+    const gridSlot = document.getElementById('gridSlot');
+    const sidebarList = document.getElementById('sidebarList');
+
+    if(!filtered.length){
+      leadSlot.innerHTML = `<div class="empty-state">
+        <h2>No stories yet in ${activeCat==='All'?'the Gazette':activeCat}</h2>
+        <p>${WELCOME_HINT}</p>
+      </div>`;
+      gridSlot.innerHTML = '';
+    } else {
+      const [lead, ...rest] = filtered;
+      leadSlot.innerHTML = renderLead(lead);
+      gridSlot.innerHTML = rest.map(renderCard).join('');
+    }
+
+    sidebarList.innerHTML = articles.slice(0,6).map((a,i)=>`
+      <div class="sidebar-item" data-id="${a.id}">
+        <span class="idx">${String(i+1).padStart(2,'0')}</span>${escapeHtml(a.title)}
+      </div>
+    `).join('') || '<div class="sidebar-item" style="cursor:default;">Nothing published yet.</div>';
+
+    document.querySelectorAll('[data-open-id]').forEach(el=>{
+      el.addEventListener('click', ()=> openReader(el.getAttribute('data-open-id')));
+    });
+    document.querySelectorAll('.sidebar-item[data-id]').forEach(el=>{
+      el.addEventListener('click', ()=> openReader(el.getAttribute('data-id')));
+    });
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function renderLead(a){
+    return `
+      <div class="lead-story" data-open-id="${a.id}">
+        <span class="eyebrow">${a.category} • Featured</span>
+        <h1>${escapeHtml(a.title)}</h1>
+        <p class="dek">${escapeHtml(a.dek)}</p>
+        <div class="byline">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
+      </div>
+    `;
+  }
+
+  function renderCard(a){
+    return `
+      <div class="article-card" data-open-id="${a.id}">
+        <span class="eyebrow">${a.category}</span>
+        <h2>${escapeHtml(a.title)}</h2>
+        <p>${escapeHtml(excerpt(a.dek, 110))}</p>
+        <div class="byline">By ${escapeHtml(a.author)} · ${fmtDate(a.date)}</div>
+      </div>
+    `;
+  }
+
+  // ---------- reader modal ----------
+  function openReader(id){
+    const a = articles.find(x=>x.id===id);
+    if(!a) return;
+    const root = document.getElementById('modalRoot');
+    root.innerHTML = `
+      <div class="modal-overlay" id="readerOverlay">
+        <div class="modal">
+          <button class="modal-close" aria-label="Close" id="readerClose">×</button>
+          <span class="eyebrow">${a.category}</span>
+          <h1>${escapeHtml(a.title)}</h1>
+          <div class="byline" style="margin-bottom:18px;">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
+          <div class="modal-body">${escapeHtml(a.body)}</div>
+          <div class="modal-actions">
+            <button id="editBtn">Edit</button>
+            <button class="danger" id="deleteBtn">Delete</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('readerOverlay').addEventListener('click', (e)=>{
+      if(e.target.id === 'readerOverlay') closeModal();
+    });
+    document.getElementById('readerClose').addEventListener('click', closeModal);
+    document.getElementById('editBtn').addEventListener('click', ()=> requireUnlock(()=> openEditor(a)));
+    document.getElementById('deleteBtn').addEventListener('click', ()=> requireUnlock(async ()=>{
+      if(confirm('Delete "'+a.title+'"? This cannot be undone.')){
+        const ok = await removeArticle(id);
+        if(ok){
+          closeModal();
+          toast('Article deleted.');
+        }
+      }
+    }));
+  }
+
+  function closeModal(){
+    document.getElementById('modalRoot').innerHTML = '';
+  }
+
+  // ---------- login gate ----------
+  function requireUnlock(onSuccess){
+    if(isUnlocked){ onSuccess(); return; }
+    const root = document.getElementById('modalRoot');
+    root.innerHTML = `
+      <div class="modal-overlay" id="gateOverlay">
+        <div class="modal gate-modal">
+          <button class="modal-close" aria-label="Close" id="gateClose">×</button>
+          <div class="lock-icon"></div>
+          <h1>Editor Login</h1>
+          <p class="gate-sub">Log in to write, edit, or delete articles.</p>
+          <div class="editor-field">
+            <label for="fEmail">Email</label>
+            <input id="fEmail" type="email" placeholder="you@example.com">
+          </div>
+          <div class="editor-field">
+            <label for="fPassword">Password</label>
+            <input id="fPassword" type="password" placeholder="••••••••">
+          </div>
+          <div class="gate-error" id="gateError">Could not log in. Check your email and password.</div>
+          <div>
+            <button class="editor-save" id="gateSubmit">Log In</button>
+            <button class="editor-cancel" id="gateCancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const overlay = document.getElementById('gateOverlay');
+    const emailInput = document.getElementById('fEmail');
+    const passInput = document.getElementById('fPassword');
+    const err = document.getElementById('gateError');
+    emailInput.focus();
+    async function tryUnlock(){
+      const submitBtn = document.getElementById('gateSubmit');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Logging in…';
+      try{
+        await signInWithEmailAndPassword(auth, emailInput.value.trim(), passInput.value);
+        closeModal();
+        toast('Logged in.');
+        onSuccess();
+      }catch(e){
+        err.style.display = 'block';
+        passInput.value = '';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Log In';
+      }
+    }
+    overlay.addEventListener('click', (e)=>{ if(e.target.id==='gateOverlay') closeModal(); });
+    document.getElementById('gateClose').addEventListener('click', closeModal);
+    document.getElementById('gateCancel').addEventListener('click', closeModal);
+    document.getElementById('gateSubmit').addEventListener('click', tryUnlock);
+    passInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') tryUnlock(); });
+  }
+
+  function updateUnlockIndicator(){
+    const statusBtn = document.getElementById('unlockStatus');
+    const writeBtn = document.getElementById('writeBtn');
+    if(isUnlocked){
+      statusBtn.style.display = 'inline-flex';
+      statusBtn.innerHTML = `<span class="dot-lit"></span>${escapeHtml(currentUserEmail)} · Log out`;
+      writeBtn.textContent = '✎ Write Article';
+    } else {
+      statusBtn.style.display = 'none';
+      writeBtn.textContent = '🔒 Write Article';
+    }
+  }
+
+  // ---------- editor modal ----------
+  function openEditor(existing){
+    const isEdit = !!existing;
+    const a = existing || {id:null, title:'', category:'Local', author:'', dek:'', body:'', date:new Date().toISOString()};
+    const root = document.getElementById('modalRoot');
+    root.innerHTML = `
+      <div class="modal-overlay" id="editorOverlay">
+        <div class="modal">
+          <button class="modal-close" aria-label="Close" id="editorClose">×</button>
+          <h1 style="font-size:24px;">${isEdit ? 'Edit Article' : 'Write New Article'}</h1>
+          <div class="editor-field">
+            <label for="fTitle">Headline</label>
+            <input id="fTitle" type="text" value="${escapeAttr(a.title)}" placeholder="What happened?">
+          </div>
+          <div class="editor-field">
+            <label for="fCategory">Section</label>
+            <select id="fCategory">
+              ${CATS.map(c=>`<option value="${c}" ${a.category===c?'selected':''}>${c}</option>`).join('')}
+            </select>
+          </div>
+          <div class="editor-field">
+            <label for="fAuthor">Byline (your name)</label>
+            <input id="fAuthor" type="text" value="${escapeAttr(a.author)}" placeholder="e.g. Jordan Reyes">
+          </div>
+          <div class="editor-field">
+            <label for="fDek">Deck (one or two sentence summary)</label>
+            <textarea id="fDek" style="min-height:70px;" placeholder="A short summary readers see first...">${escapeHtml(a.dek)}</textarea>
+          </div>
+          <div class="editor-field">
+            <label for="fBody">Full Article</label>
+            <textarea id="fBody" placeholder="Write the full story here...">${escapeHtml(a.body)}</textarea>
+          </div>
+          <div>
+            <button class="editor-save" id="saveArticleBtn">${isEdit ? 'Save Changes' : 'Publish Article'}</button>
+            <button class="editor-cancel" id="cancelEditorBtn">Cancel</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.getElementById('editorOverlay').addEventListener('click', (e)=>{
+      if(e.target.id === 'editorOverlay') closeModal();
+    });
+    document.getElementById('editorClose').addEventListener('click', closeModal);
+    document.getElementById('cancelEditorBtn').addEventListener('click', closeModal);
+    document.getElementById('saveArticleBtn').addEventListener('click', async ()=>{
+      const title = document.getElementById('fTitle').value.trim();
+      const category = document.getElementById('fCategory').value;
+      const author = document.getElementById('fAuthor').value.trim() || 'Staff Writer';
+      const dek = document.getElementById('fDek').value.trim();
+      const body = document.getElementById('fBody').value.trim();
+
+      if(!title || !body){
+        toast('A headline and article body are required.');
+        return;
+      }
+
+      const record = {
+        title,
+        category,
+        author,
+        dek: dek || excerpt(body, 140),
+        body,
+        date: isEdit ? a.date : new Date().toISOString()
+      };
+
+      const saveBtn = document.getElementById('saveArticleBtn');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+
+      const ok = isEdit ? await updateArticle(a.id, record) : await createArticle(record);
+      if(ok){
+        closeModal();
+        toast(isEdit ? 'Article updated.' : 'Article published.');
+      } else {
+        saveBtn.disabled = false;
+        saveBtn.textContent = isEdit ? 'Save Changes' : 'Publish Article';
+      }
+    });
+  }
+
+  function escapeAttr(s){
+    return escapeHtml(s || '');
+  }
+
+  // ---------- nav ----------
+  document.getElementById('sectionNav').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button[data-cat]');
+    if(!btn) return;
+    activeCat = btn.getAttribute('data-cat');
+    document.querySelectorAll('#sectionNav button[data-cat]').forEach(b=>b.classList.toggle('active', b===btn));
+    render();
+  });
+
+  document.getElementById('writeBtn').addEventListener('click', ()=> requireUnlock(()=> openEditor(null)));
+
+  document.getElementById('unlockStatus').addEventListener('click', async ()=>{
+    if(confirm('Log out of the editor?')){
+      await signOut(auth);
+      toast('Logged out.');
+    }
+  });
+
+  document.getElementById('subBtn').addEventListener('click', ()=>{
+    const val = document.getElementById('subEmail').value.trim();
+    if(val && val.includes('@')){
+      toast('Subscribed! (Preview only — connect an email service to make this live.)');
+      document.getElementById('subEmail').value = '';
+    } else {
+      toast('Enter a valid email to subscribe.');
+    }
+  });
+
+  // ---------- init ----------
+  onAuthStateChanged(auth, (user)=>{
+    isUnlocked = !!user;
+    currentUserEmail = user ? user.email : "";
+    updateUnlockIndicator();
+  });
+
+  subscribeArticles();
+
+})();
+</script>
+
+</body>
+</html>
