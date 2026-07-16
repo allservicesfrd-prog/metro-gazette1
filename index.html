@@ -560,6 +560,7 @@ async function uploadToCloudinary(file){
   }
 
   // ---------- firestore ----------
+  let initialArticleChecked = false;
   function subscribeArticles(){
     const q = query(articlesRef, orderBy("date", "desc"));
     onSnapshot(q, (snapshot)=>{
@@ -567,6 +568,13 @@ async function uploadToCloudinary(file){
       document.getElementById('loadingRow').style.display = 'none';
       document.getElementById('layoutRoot').style.display = 'grid';
       render();
+      if(!initialArticleChecked){
+        initialArticleChecked = true;
+        const id = new URLSearchParams(window.location.search).get('article');
+        if(id && articles.find(x=>x.id===id)){
+          openReader(id, {skipPush:true});
+        }
+      }
     }, (err)=>{
       document.getElementById('loadingRow').textContent = 'Could not load articles. Check your connection and try again.';
     });
@@ -745,9 +753,14 @@ async function uploadToCloudinary(file){
   }
 
   // ---------- reader modal ----------
-  function openReader(id){
+  function openReader(id, opts){
     const a = articles.find(x=>x.id===id);
     if(!a) return;
+    if(!opts || !opts.skipPush){
+      const url = new URL(window.location.href);
+      url.searchParams.set('article', id);
+      history.pushState({articleId:id}, '', url);
+    }
     const root = document.getElementById('modalRoot');
     root.innerHTML = `
       <div class="modal-overlay" id="readerOverlay">
@@ -759,6 +772,7 @@ async function uploadToCloudinary(file){
           <div class="byline" style="margin-bottom:18px;">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
           <div class="modal-body">${escapeHtml(a.body)}</div>
           <div class="modal-actions">
+            <button id="copyLinkBtn">Copy Link</button>
             <button id="editBtn">Edit</button>
             <button class="danger" id="deleteBtn">Delete</button>
           </div>
@@ -766,24 +780,52 @@ async function uploadToCloudinary(file){
       </div>
     `;
     document.getElementById('readerOverlay').addEventListener('click', (e)=>{
-      if(e.target.id === 'readerOverlay') closeModal();
+      if(e.target.id === 'readerOverlay') closeReader();
     });
-    document.getElementById('readerClose').addEventListener('click', closeModal);
+    document.getElementById('readerClose').addEventListener('click', closeReader);
+    document.getElementById('copyLinkBtn').addEventListener('click', async ()=>{
+      const url = new URL(window.location.href);
+      url.searchParams.set('article', id);
+      try{
+        await navigator.clipboard.writeText(url.toString());
+        toast('Link copied.');
+      }catch(e){
+        toast(url.toString());
+      }
+    });
     document.getElementById('editBtn').addEventListener('click', ()=> requireUnlock(()=> openEditor(a)));
     document.getElementById('deleteBtn').addEventListener('click', ()=> requireUnlock(async ()=>{
       if(confirm('Delete "'+a.title+'"? This cannot be undone.')){
         const ok = await removeArticle(id);
         if(ok){
-          closeModal();
+          closeReader();
           toast('Article deleted.');
         }
       }
     }));
   }
 
+  function closeReader(){
+    const url = new URL(window.location.href);
+    if(url.searchParams.has('article')){
+      url.searchParams.delete('article');
+      history.pushState({}, '', url);
+    }
+    closeModal();
+  }
+
   function closeModal(){
     document.getElementById('modalRoot').innerHTML = '';
   }
+
+  window.addEventListener('popstate', ()=>{
+    const id = new URLSearchParams(window.location.search).get('article');
+    if(id){
+      if(articles.find(x=>x.id===id)) openReader(id, {skipPush:true});
+    } else {
+      closeModal();
+    }
+  });
 
   // ---------- login gate ----------
   function requireUnlock(onSuccess){
