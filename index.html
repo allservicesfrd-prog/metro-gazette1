@@ -6,6 +6,14 @@
 <title>Metro Gazette — News That Matters</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,800;0,900;1,600&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-2Z4XENMGKK"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-2Z4XENMGKK');
+</script>
 <style>
   :root{
     --navy:#1B2A4A;
@@ -393,7 +401,7 @@
   .spotlight-item:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
   .spotlight-thumb{
     width:44px;height:44px;flex:none;background-size:cover;background-position:center;
-    background-color:rgba(255,255,255,0.12);border-radius:3px;
+    background-color:rgba(255,255,255,0.12);border-radius:3px;object-fit:cover;
   }
   .spotlight-info{flex:1;min-width:0;}
   .spotlight-name{font-family:'Inter',sans-serif;font-weight:700;font-size:13.5px;color:#fff;}
@@ -515,6 +523,18 @@ async function uploadToCloudinary(file){
   formData.append('file', file);
   formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
   const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+    method: 'POST', body: formData
+  });
+  if(!res.ok) throw new Error('Upload failed');
+  const data = await res.json();
+  return data.secure_url;
+}
+
+async function uploadVideoToCloudinary(file){
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/video/upload`, {
     method: 'POST', body: formData
   });
   if(!res.ok) throw new Error('Upload failed');
@@ -697,16 +717,22 @@ async function uploadToCloudinary(file){
       list.innerHTML = '<div class="spotlight-item spotlight-empty">No businesses featured yet.</div>';
       return;
     }
-    list.innerHTML = spotlights.map(s=>`
+    list.innerHTML = spotlights.map(s=>{
+      const mediaUrl = s.mediaUrl || s.imageUrl || '';
+      const isVideo = s.mediaType === 'video';
+      const thumbHtml = isVideo
+        ? (mediaUrl ? `<video class="spotlight-thumb" src="${mediaUrl}" muted loop playsinline autoplay></video>` : `<div class="spotlight-thumb"></div>`)
+        : `<div class="spotlight-thumb" style="${mediaUrl ? `background-image:url('${mediaUrl}')` : ''}"></div>`;
+      return `
       <div class="spotlight-item" data-visit="${s.id}">
-        <div class="spotlight-thumb" style="${s.imageUrl ? `background-image:url('${s.imageUrl}')` : ''}"></div>
+        ${thumbHtml}
         <div class="spotlight-info">
           <div class="spotlight-name">${escapeHtml(s.name)}</div>
           <div class="spotlight-blurb">${escapeHtml(s.blurb || '')}</div>
         </div>
         ${isUnlocked ? `<button class="spotlight-edit" data-edit="${s.id}" title="Edit">✎</button>` : ''}
       </div>
-    `).join('');
+    `;}).join('');
 
     list.querySelectorAll('[data-visit]').forEach(el=>{
       el.addEventListener('click', (e)=>{
@@ -761,6 +787,13 @@ async function uploadToCloudinary(file){
       url.searchParams.set('article', id);
       history.pushState({articleId:id}, '', url);
     }
+    if(typeof gtag === 'function'){
+      gtag('event', 'page_view', {
+        page_title: a.title,
+        page_location: window.location.href,
+        page_path: window.location.pathname + window.location.search
+      });
+    }
     const root = document.getElementById('modalRoot');
     root.innerHTML = `
       <div class="modal-overlay" id="readerOverlay">
@@ -784,13 +817,12 @@ async function uploadToCloudinary(file){
     });
     document.getElementById('readerClose').addEventListener('click', closeReader);
     document.getElementById('copyLinkBtn').addEventListener('click', async ()=>{
-      const url = new URL(window.location.href);
-      url.searchParams.set('article', id);
+      const shareUrl = `https://metro-preview-surf-a4a9.clydeberk581.workers.dev/?article=${id}`;
       try{
-        await navigator.clipboard.writeText(url.toString());
-        toast('Link copied.');
+        await navigator.clipboard.writeText(shareUrl);
+        toast('Link copied — ready for Facebook/X.');
       }catch(e){
-        toast(url.toString());
+        toast(shareUrl);
       }
     });
     document.getElementById('editBtn').addEventListener('click', ()=> requireUnlock(()=> openEditor(a)));
@@ -1025,8 +1057,11 @@ async function uploadToCloudinary(file){
   // ---------- business spotlight editor modal ----------
   function openSpotlightEditor(existing){
     const isEdit = !!existing;
-    const s = existing || {id:null, name:'', link:'', blurb:'', imageUrl:'', date:new Date().toISOString()};
-    let pendingImageUrl = s.imageUrl || null;
+    const s = existing || {id:null, name:'', link:'', blurb:'', mediaUrl:'', mediaType:'image', date:new Date().toISOString()};
+    const existingMediaUrl = s.mediaUrl || s.imageUrl || '';
+    const existingMediaType = s.mediaType || (existingMediaUrl ? 'image' : 'image');
+    let pendingMediaUrl = existingMediaUrl || null;
+    let pendingMediaType = existingMediaType;
     const root = document.getElementById('modalRoot');
     root.innerHTML = `
       <div class="modal-overlay" id="spotlightEditorOverlay">
@@ -1042,11 +1077,15 @@ async function uploadToCloudinary(file){
             <input id="fBizLink" type="url" value="${escapeAttr(s.link)}" placeholder="https://...">
           </div>
           <div class="editor-field image-upload-wrap">
-            <label for="fBizImage">Photo / logo (optional)</label>
-            <input id="fBizImage" type="file" accept="image/*">
+            <label for="fBizImage">Photo or short video (optional)</label>
+            <input id="fBizImage" type="file" accept="image/*,video/*">
             <div id="bizImageStatus" class="image-status" style="display:none;"></div>
-            <img id="bizImagePreview" class="image-preview" src="${s.imageUrl || ''}" style="${s.imageUrl ? '' : 'display:none;'}" alt="">
-            <button type="button" id="removeBizImageBtn" class="remove-image-btn" style="${s.imageUrl ? '' : 'display:none;'}">Remove photo</button>
+            <div id="bizMediaPreviewWrap" style="${existingMediaUrl ? '' : 'display:none;'}">
+              ${existingMediaType === 'video'
+                ? `<video id="bizMediaPreview" class="image-preview" src="${existingMediaUrl}" controls muted playsinline></video>`
+                : `<img id="bizMediaPreview" class="image-preview" src="${existingMediaUrl}" alt="">`}
+              <button type="button" id="removeBizImageBtn" class="remove-image-btn">Remove</button>
+            </div>
           </div>
           <div class="editor-field">
             <label for="fBizBlurb">Short blurb</label>
@@ -1067,32 +1106,48 @@ async function uploadToCloudinary(file){
     document.getElementById('cancelBizEditorBtn').addEventListener('click', closeModal);
 
     const fileInput = document.getElementById('fBizImage');
-    const preview = document.getElementById('bizImagePreview');
+    const previewWrap = document.getElementById('bizMediaPreviewWrap');
     const status = document.getElementById('bizImageStatus');
-    const removeBtn = document.getElementById('removeBizImageBtn');
+    let removeBtn = document.getElementById('removeBizImageBtn');
+
+    function renderPreview(url, type){
+      previewWrap.innerHTML = type === 'video'
+        ? `<video id="bizMediaPreview" class="image-preview" src="${url}" controls muted playsinline></video><button type="button" id="removeBizImageBtn" class="remove-image-btn">Remove</button>`
+        : `<img id="bizMediaPreview" class="image-preview" src="${url}" alt=""><button type="button" id="removeBizImageBtn" class="remove-image-btn">Remove</button>`;
+      previewWrap.style.display = 'block';
+      removeBtn = document.getElementById('removeBizImageBtn');
+      removeBtn.addEventListener('click', ()=>{
+        pendingMediaUrl = null;
+        fileInput.value = '';
+        previewWrap.style.display = 'none';
+        previewWrap.innerHTML = '';
+      });
+    }
+
+    if(removeBtn){
+      removeBtn.addEventListener('click', ()=>{
+        pendingMediaUrl = null;
+        fileInput.value = '';
+        previewWrap.style.display = 'none';
+        previewWrap.innerHTML = '';
+      });
+    }
 
     fileInput.addEventListener('change', async ()=>{
       const file = fileInput.files[0];
       if(!file) return;
+      const isVideo = file.type.startsWith('video/');
       status.style.display = 'block';
-      status.textContent = 'Uploading photo…';
+      status.textContent = isVideo ? 'Uploading video…' : 'Uploading photo…';
       try{
-        const url = await uploadToCloudinary(file);
-        pendingImageUrl = url;
-        preview.src = url;
-        preview.style.display = 'block';
-        removeBtn.style.display = 'inline-block';
+        const url = isVideo ? await uploadVideoToCloudinary(file) : await uploadToCloudinary(file);
+        pendingMediaUrl = url;
+        pendingMediaType = isVideo ? 'video' : 'image';
+        renderPreview(url, pendingMediaType);
         status.style.display = 'none';
       }catch(e){
-        status.textContent = 'Upload failed — try a different photo.';
+        status.textContent = 'Upload failed — try a different file.';
       }
-    });
-
-    removeBtn.addEventListener('click', ()=>{
-      pendingImageUrl = null;
-      fileInput.value = '';
-      preview.style.display = 'none';
-      removeBtn.style.display = 'none';
     });
 
     if(isEdit){
@@ -1118,7 +1173,9 @@ async function uploadToCloudinary(file){
         name,
         link,
         blurb,
-        imageUrl: pendingImageUrl || null,
+        mediaUrl: pendingMediaUrl || null,
+        mediaType: pendingMediaUrl ? pendingMediaType : null,
+        imageUrl: pendingMediaUrl && pendingMediaType === 'image' ? pendingMediaUrl : null,
         date: isEdit ? s.date : new Date().toISOString()
       };
 
