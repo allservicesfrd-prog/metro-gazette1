@@ -796,19 +796,20 @@ async function uploadVideoToCloudinary(file){
   function sanitizeRichHtml(html){
     const doc = new DOMParser().parseFromString(html || '', 'text/html');
     function clean(node){
-      [...node.childNodes].forEach(child=>{
+      const children = [...node.childNodes];
+      for(const child of children){
         if(child.nodeType === 1){
+          clean(child); // sanitize descendants FIRST, before deciding to unwrap this node
           if(!RT_ALLOWED_TAGS.has(child.tagName)){
             while(child.firstChild) node.insertBefore(child.firstChild, child);
             node.removeChild(child);
           } else {
             [...child.attributes].forEach(attr=> child.removeAttribute(attr.name));
-            clean(child);
           }
         } else if(child.nodeType !== 3){
           node.removeChild(child);
         }
-      });
+      }
     }
     clean(doc.body);
     return doc.body.innerHTML.trim();
@@ -843,10 +844,17 @@ async function uploadVideoToCloudinary(file){
         btn.textContent = expanded ? '⤡ Collapse' : '⤢ Expand';
       });
     });
+    scopeEl.querySelectorAll('.rt-editable').forEach(editable=>{
+      editable.addEventListener('paste', (e)=>{
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+        document.execCommand('insertText', false, text);
+      });
+    });
   }
 
   function renderLead(a){
-    const dekHtml = a.format === 'html' ? a.dek : escapeHtml(a.dek);
+    const dekHtml = a.format === 'html' ? sanitizeRichHtml(a.dek) : escapeHtml(a.dek);
     return `
       <div class="lead-story" data-open-id="${a.id}">
         ${a.imageUrl ? `<img class="lead-image" src="${a.imageUrl}" alt="">` : ''}
@@ -896,7 +904,7 @@ async function uploadVideoToCloudinary(file){
           <span class="eyebrow">${a.category}</span>
           <h1>${escapeHtml(a.title)}</h1>
           <div class="byline" style="margin-bottom:18px;">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
-          <div class="modal-body${a.format === 'html' ? ' modal-body-html' : ''}">${a.format === 'html' ? a.body : escapeHtml(a.body)}</div>
+          <div class="modal-body${a.format === 'html' ? ' modal-body-html' : ''}">${a.format === 'html' ? sanitizeRichHtml(a.body) : escapeHtml(a.body)}</div>
           <div class="modal-actions">
             <button id="copyLinkBtn">Copy Link</button>
             <button id="editBtn">Edit</button>
