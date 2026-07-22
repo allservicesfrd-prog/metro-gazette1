@@ -294,6 +294,7 @@
     color:var(--ink);margin:6px 0 12px;line-height:1.1;
   }
   .modal .modal-body{font-size:17px;line-height:1.7;color:#2a2a2a;white-space:pre-wrap;}
+  .modal .modal-body.modal-body-html{white-space:normal;}
   .modal .modal-actions{margin-top:24px;padding-top:16px;border-top:1px solid var(--rule);
     display:flex;gap:10px;font-family:'Inter',sans-serif;}
   .modal .modal-actions button{
@@ -415,6 +416,42 @@
   .spotlight-empty{
     font-family:'Inter',sans-serif;font-size:13px;color:#C9D2E3;cursor:default;
   }
+
+  /* Rich text editor for Deck / Body */
+  .rt-label-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+  .rt-label-row label{margin-bottom:0;}
+  .rt-maximize-btn{
+    background:none;border:1px solid var(--rule);font-family:'Inter',sans-serif;font-size:11px;
+    padding:4px 9px;cursor:pointer;border-radius:2px;color:#555;white-space:nowrap;
+  }
+  .rt-maximize-btn:hover{background:var(--navy-tint);border-color:var(--navy);}
+  .rt-toolbar{display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;}
+  .rt-toolbar button{
+    min-width:30px;height:28px;border:1px solid var(--rule);background:#fff;cursor:pointer;
+    font-family:'Source Serif 4',serif;font-size:13px;border-radius:2px;padding:0 8px;color:var(--ink);
+  }
+  .rt-toolbar button:hover{background:var(--navy-tint);}
+  .rt-toolbar button.rt-list-btn{font-family:'Inter',sans-serif;font-size:11px;}
+  .rt-editable{
+    border:1px solid var(--rule);padding:10px 12px;min-height:160px;max-height:160px;overflow-y:auto;
+    font-family:'Source Serif 4',serif;font-size:15px;line-height:1.55;background:#fff;border-radius:2px;
+    transition:min-height .15s ease, max-height .15s ease;
+  }
+  .rt-editable:focus{outline:2px solid var(--gold-dark);outline-offset:1px;}
+  .rt-editable:empty:before{content:attr(data-placeholder);color:#999;}
+  .rt-editable.rt-expanded{min-height:56vh;max-height:56vh;}
+  #fDek.rt-editable{min-height:64px;max-height:64px;}
+  #fDek.rt-editable.rt-expanded{min-height:32vh;max-height:32vh;}
+  .rt-editable p{margin:0 0 0.9em;}
+  .rt-editable p:last-child{margin-bottom:0;}
+  .rt-editable ul, .rt-editable ol{margin:0 0 0.9em 1.3em;padding:0;}
+  .rt-editable div{margin:0 0 0.2em;}
+
+  /* Rendered rich text on the live site */
+  .modal-body p{margin:0 0 1em;}
+  .modal-body p:last-child{margin-bottom:0;}
+  .modal-body ul, .modal-body ol{margin:0 0 1em 1.4em;padding:0;}
+  .lead-story .dek p{margin:0;}
 </style>
 </head>
 <body>
@@ -754,25 +791,81 @@ async function uploadVideoToCloudinary(file){
     return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
+  const RT_ALLOWED_TAGS = new Set(['B','STRONG','I','EM','U','UL','OL','LI','BR','P','DIV']);
+
+  function sanitizeRichHtml(html){
+    const doc = new DOMParser().parseFromString(html || '', 'text/html');
+    function clean(node){
+      [...node.childNodes].forEach(child=>{
+        if(child.nodeType === 1){
+          if(!RT_ALLOWED_TAGS.has(child.tagName)){
+            while(child.firstChild) node.insertBefore(child.firstChild, child);
+            node.removeChild(child);
+          } else {
+            [...child.attributes].forEach(attr=> child.removeAttribute(attr.name));
+            clean(child);
+          }
+        } else if(child.nodeType !== 3){
+          node.removeChild(child);
+        }
+      });
+    }
+    clean(doc.body);
+    return doc.body.innerHTML.trim();
+  }
+
+  function stripHtml(html){
+    const div = document.createElement('div');
+    div.innerHTML = html || '';
+    return (div.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function plainToEditableHtml(text){
+    return escapeHtml(text || '').replace(/\n/g, '<br>');
+  }
+
+  function wireRichTextControls(scopeEl){
+    scopeEl.querySelectorAll('.rt-toolbar').forEach(toolbar=>{
+      const editableId = toolbar.getAttribute('data-for');
+      toolbar.querySelectorAll('button[data-cmd]').forEach(btn=>{
+        btn.addEventListener('click', (e)=>{
+          e.preventDefault();
+          const editable = document.getElementById(editableId);
+          editable.focus();
+          document.execCommand(btn.getAttribute('data-cmd'), false, null);
+        });
+      });
+    });
+    scopeEl.querySelectorAll('.rt-maximize-btn').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const target = document.getElementById(btn.getAttribute('data-target'));
+        const expanded = target.classList.toggle('rt-expanded');
+        btn.textContent = expanded ? '⤡ Collapse' : '⤢ Expand';
+      });
+    });
+  }
+
   function renderLead(a){
+    const dekHtml = a.format === 'html' ? a.dek : escapeHtml(a.dek);
     return `
       <div class="lead-story" data-open-id="${a.id}">
         ${a.imageUrl ? `<img class="lead-image" src="${a.imageUrl}" alt="">` : ''}
         <span class="eyebrow">${a.category} • Featured</span>
         <h1>${escapeHtml(a.title)}</h1>
-        <p class="dek">${escapeHtml(a.dek)}</p>
+        <p class="dek">${dekHtml}</p>
         <div class="byline">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
       </div>
     `;
   }
 
   function renderCard(a){
+    const dekPlain = a.format === 'html' ? stripHtml(a.dek) : a.dek;
     return `
       <div class="article-card" data-open-id="${a.id}">
         ${a.imageUrl ? `<img class="card-image" src="${a.imageUrl}" alt="">` : ''}
         <span class="eyebrow">${a.category}</span>
         <h2>${escapeHtml(a.title)}</h2>
-        <p>${escapeHtml(excerpt(a.dek, 110))}</p>
+        <p>${escapeHtml(excerpt(dekPlain, 110))}</p>
         <div class="byline">By ${escapeHtml(a.author)} · ${fmtDate(a.date)}</div>
       </div>
     `;
@@ -803,7 +896,7 @@ async function uploadVideoToCloudinary(file){
           <span class="eyebrow">${a.category}</span>
           <h1>${escapeHtml(a.title)}</h1>
           <div class="byline" style="margin-bottom:18px;">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
-          <div class="modal-body">${escapeHtml(a.body)}</div>
+          <div class="modal-body${a.format === 'html' ? ' modal-body-html' : ''}">${a.format === 'html' ? a.body : escapeHtml(a.body)}</div>
           <div class="modal-actions">
             <button id="copyLinkBtn">Copy Link</button>
             <button id="editBtn">Edit</button>
@@ -934,8 +1027,10 @@ async function uploadVideoToCloudinary(file){
   // ---------- editor modal ----------
   function openEditor(existing){
     const isEdit = !!existing;
-    const a = existing || {id:null, title:'', category:'Local', author:'', dek:'', body:'', imageUrl:'', date:new Date().toISOString()};
+    const a = existing || {id:null, title:'', category:'Local', author:'', dek:'', body:'', imageUrl:'', format:'html', date:new Date().toISOString()};
     let pendingImageUrl = a.imageUrl || null;
+    const dekInitialHtml = a.format === 'html' ? a.dek : plainToEditableHtml(a.dek);
+    const bodyInitialHtml = a.format === 'html' ? a.body : plainToEditableHtml(a.body);
     const root = document.getElementById('modalRoot');
     root.innerHTML = `
       <div class="modal-overlay" id="editorOverlay">
@@ -964,12 +1059,32 @@ async function uploadVideoToCloudinary(file){
             <button type="button" id="removeImageBtn" class="remove-image-btn" style="${a.imageUrl ? '' : 'display:none;'}">Remove photo</button>
           </div>
           <div class="editor-field">
-            <label for="fDek">Deck (one or two sentence summary)</label>
-            <textarea id="fDek" style="min-height:70px;" placeholder="A short summary readers see first...">${escapeHtml(a.dek)}</textarea>
+            <div class="rt-label-row">
+              <label for="fDek">Deck (one or two sentence summary)</label>
+              <button type="button" class="rt-maximize-btn" data-target="fDek">⤢ Expand</button>
+            </div>
+            <div class="rt-toolbar" data-for="fDek">
+              <button type="button" data-cmd="bold"><b>B</b></button>
+              <button type="button" data-cmd="italic"><i>I</i></button>
+              <button type="button" data-cmd="underline"><u>U</u></button>
+              <button type="button" class="rt-list-btn" data-cmd="removeFormat">Clear</button>
+            </div>
+            <div id="fDek" class="rt-editable" contenteditable="true" data-placeholder="A short summary readers see first...">${dekInitialHtml}</div>
           </div>
           <div class="editor-field">
-            <label for="fBody">Full Article</label>
-            <textarea id="fBody" placeholder="Write the full story here...">${escapeHtml(a.body)}</textarea>
+            <div class="rt-label-row">
+              <label for="fBody">Full Article</label>
+              <button type="button" class="rt-maximize-btn" data-target="fBody">⤢ Expand</button>
+            </div>
+            <div class="rt-toolbar" data-for="fBody">
+              <button type="button" data-cmd="bold"><b>B</b></button>
+              <button type="button" data-cmd="italic"><i>I</i></button>
+              <button type="button" data-cmd="underline"><u>U</u></button>
+              <button type="button" class="rt-list-btn" data-cmd="insertUnorderedList">• List</button>
+              <button type="button" class="rt-list-btn" data-cmd="insertOrderedList">1. List</button>
+              <button type="button" class="rt-list-btn" data-cmd="removeFormat">Clear</button>
+            </div>
+            <div id="fBody" class="rt-editable" contenteditable="true" data-placeholder="Write the full story here...">${bodyInitialHtml}</div>
           </div>
           <div>
             <button class="editor-save" id="saveArticleBtn">${isEdit ? 'Save Changes' : 'Publish Article'}</button>
@@ -978,6 +1093,7 @@ async function uploadVideoToCloudinary(file){
         </div>
       </div>
     `;
+    wireRichTextControls(root);
     document.getElementById('editorOverlay').addEventListener('click', (e)=>{
       if(e.target.id === 'editorOverlay') closeModal();
     });
@@ -1017,10 +1133,12 @@ async function uploadVideoToCloudinary(file){
       const title = document.getElementById('fTitle').value.trim();
       const category = document.getElementById('fCategory').value;
       const author = document.getElementById('fAuthor').value.trim() || 'Staff Writer';
-      const dek = document.getElementById('fDek').value.trim();
-      const body = document.getElementById('fBody').value.trim();
+      const dek = sanitizeRichHtml(document.getElementById('fDek').innerHTML.trim());
+      const body = sanitizeRichHtml(document.getElementById('fBody').innerHTML.trim());
+      const bodyPlain = stripHtml(body);
+      const dekPlain = stripHtml(dek);
 
-      if(!title || !body){
+      if(!title || !bodyPlain){
         toast('A headline and article body are required.');
         return;
       }
@@ -1029,8 +1147,9 @@ async function uploadVideoToCloudinary(file){
         title,
         category,
         author,
-        dek: dek || excerpt(body, 140),
+        dek: dek || plainToEditableHtml(excerpt(bodyPlain, 140)),
         body,
+        format: 'html',
         imageUrl: pendingImageUrl || null,
         date: isEdit ? a.date : new Date().toISOString()
       };
