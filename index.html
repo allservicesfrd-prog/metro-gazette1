@@ -295,6 +295,11 @@
   }
   .modal .modal-body{font-size:17px;line-height:1.7;color:#2a2a2a;white-space:pre-wrap;}
   .modal .modal-body.modal-body-html{white-space:normal;}
+  .modal .modal-dek{
+    font-size:18px;line-height:1.5;color:#3a3a3a;margin:10px 0 14px;font-style:italic;
+  }
+  .modal .modal-dek p{margin:0;}
+  .modal .modal-dek:empty{display:none;}
   .modal .modal-actions{margin-top:24px;padding-top:16px;border-top:1px solid var(--rule);
     display:flex;gap:10px;font-family:'Inter',sans-serif;}
   .modal .modal-actions button{
@@ -903,6 +908,7 @@ async function uploadVideoToCloudinary(file){
           ${a.imageUrl ? `<img class="modal-hero-image" src="${a.imageUrl}" alt="">` : ''}
           <span class="eyebrow">${a.category}</span>
           <h1>${escapeHtml(a.title)}</h1>
+          <p class="modal-dek">${a.format === 'html' ? sanitizeRichHtml(a.dek) : escapeHtml(a.dek)}</p>
           <div class="byline" style="margin-bottom:18px;">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
           <div class="modal-body${a.format === 'html' ? ' modal-body-html' : ''}">${a.format === 'html' ? sanitizeRichHtml(a.body) : escapeHtml(a.body)}</div>
           <div class="modal-actions">
