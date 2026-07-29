@@ -272,6 +272,11 @@
     font-family:'Inter',sans-serif;font-size:12.5px;
   }
   footer .fname{font-family:'Playfair Display',serif;color:var(--gold);font-size:18px;display:block;margin-bottom:6px;}
+  .footer-links{margin:16px 0 10px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+  .footer-links a{color:var(--cream);text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
+  .footer-links a:hover{color:var(--gold);}
+  .footer-divider{color:var(--gold);}
+  .footer-copyright{color:#B7C0D6;}
 
   /* ===== Modal: article reader ===== */
   .modal-overlay{
@@ -295,11 +300,35 @@
   }
   .modal .modal-body{font-size:17px;line-height:1.7;color:#2a2a2a;white-space:pre-wrap;}
   .modal .modal-body.modal-body-html{white-space:normal;}
+  .legal-modal{max-width:800px;}
+  .legal-content{font-size:16px;line-height:1.65;color:#2a2a2a;}
+  .legal-content h2{font-family:'Playfair Display',serif;font-size:21px;color:var(--navy);margin:26px 0 8px;}
+  .legal-content h2:first-child{margin-top:0;}
+  .legal-content p{margin:0 0 14px;}
+  .legal-content ul{margin:0 0 14px 1.25em;padding:0;}
+  .legal-content a{color:var(--gold-dark);text-decoration:underline;}
   .modal .modal-dek{
     font-size:18px;line-height:1.5;color:#3a3a3a;margin:10px 0 14px;font-style:italic;
   }
   .modal .modal-dek p{margin:0;}
   .modal .modal-dek:empty{display:none;}
+
+  /* Language switcher */
+  .lang-row{
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--rule);
+    font-family:'Inter',sans-serif;
+  }
+  .lang-label{font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#777;}
+  .lang-btn{
+    background:#fff;border:1px solid var(--rule);color:var(--navy);
+    font-family:'Inter',sans-serif;font-size:12px;font-weight:600;
+    padding:5px 12px;cursor:pointer;border-radius:20px;letter-spacing:0.03em;
+  }
+  .lang-btn:hover{border-color:var(--navy);}
+  .lang-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+  .lang-status{font-size:12px;color:var(--gold-dark);display:none;font-style:italic;}
+  .home-lang-row{margin:0 0 24px;}
   .modal .modal-actions{margin-top:24px;padding-top:16px;border-top:1px solid var(--rule);
     display:flex;gap:10px;font-family:'Inter',sans-serif;}
   .modal .modal-actions button{
@@ -498,6 +527,15 @@
 
 <main>
   <div id="loadingRow" class="loading-row">Loading the presses…</div>
+  <div class="lang-row home-lang-row" id="homeLangRow">
+    <span class="lang-label">Read in:</span>
+    <button class="lang-btn active" data-lang="original">Original</button>
+    <button class="lang-btn" data-lang="en">English</button>
+    <button class="lang-btn" data-lang="fr">Français</button>
+    <button class="lang-btn" data-lang="es">Español</button>
+    <button class="lang-btn" data-lang="ht">Kreyòl</button>
+    <span class="lang-status" id="homeLangStatus"></span>
+  </div>
   <div class="layout" id="layoutRoot" style="display:none;">
     <div>
       <div id="leadSlot"></div>
@@ -528,6 +566,14 @@
 <footer>
   <span class="fname">METRO GAZETTE</span>
   Published locally. Written honestly. — News That Matters
+  <div class="footer-links">
+    <a href="#privacy-policy" data-legal="privacy">Privacy Policy</a>
+    <span class="footer-divider">|</span>
+    <a href="#terms-of-service" data-legal="terms">Terms of Service</a>
+    <span class="footer-divider">|</span>
+    <a href="mailto:allservicesfrd@gmail.com">Contact</a>
+  </div>
+  <div class="footer-copyright">© 2026 Metro-Gazette. All rights reserved.</div>
 </footer>
 
 <div id="modalRoot"></div>
@@ -589,6 +635,8 @@ async function uploadVideoToCloudinary(file){
   let articles = [];
   let spotlights = [];
   let activeCat = "All";
+  let homeLanguage = "original";
+  const homeTranslations = new Map();
   let isUnlocked = false;
   let currentUserEmail = "";
 
@@ -740,7 +788,7 @@ async function uploadVideoToCloudinary(file){
 
     sidebarList.innerHTML = articles.slice(0,6).map((a,i)=>`
       <div class="sidebar-item" data-id="${a.id}">
-        <span class="idx">${String(i+1).padStart(2,'0')}</span>${escapeHtml(a.title)}
+        <span class="idx">${String(i+1).padStart(2,'0')}</span>${escapeHtml(homeArticleText(a).title)}
       </div>
     `).join('') || '<div class="sidebar-item" style="cursor:default;">Nothing published yet.</div>';
 
@@ -830,6 +878,51 @@ async function uploadVideoToCloudinary(file){
     return escapeHtml(text || '').replace(/\n/g, '<br>');
   }
 
+  // ---------- translation ----------
+  const MYMEMORY_MAX_CHARS = 450;
+
+  function chunkText(text, maxLen){
+    const paragraphs = text.split(/\n{2,}/).map(p=>p.trim()).filter(Boolean);
+    const chunks = [];
+    let current = '';
+    for(const para of paragraphs){
+      if(para.length > maxLen){
+        if(current){ chunks.push(current); current = ''; }
+        const sentences = para.match(/[^.!?]+[.!?]*\s*/g) || [para];
+        let sub = '';
+        for(const sent of sentences){
+          if((sub + sent).length > maxLen){
+            if(sub) chunks.push(sub.trim());
+            sub = sent;
+          } else {
+            sub += sent;
+          }
+        }
+        if(sub) chunks.push(sub.trim());
+      } else if((current + '\n\n' + para).length > maxLen){
+        if(current) chunks.push(current);
+        current = para;
+      } else {
+        current = current ? current + '\n\n' + para : para;
+      }
+    }
+    if(current) chunks.push(current);
+    return chunks.length ? chunks : [text];
+  }
+
+  async function translateText(text, targetLang){
+    if(!text || !text.trim()) return '';
+    const chunks = chunkText(text, MYMEMORY_MAX_CHARS);
+    const results = [];
+    for(const chunk of chunks){
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=autodetect|${targetLang}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      results.push(data?.responseData?.translatedText || chunk);
+    }
+    return results.join('\n\n');
+  }
+
   function wireRichTextControls(scopeEl){
     scopeEl.querySelectorAll('.rt-toolbar').forEach(toolbar=>{
       const editableId = toolbar.getAttribute('data-for');
@@ -859,12 +952,15 @@ async function uploadVideoToCloudinary(file){
   }
 
   function renderLead(a){
-    const dekHtml = a.format === 'html' ? sanitizeRichHtml(a.dek) : escapeHtml(a.dek);
+    const copy = homeArticleText(a);
+    const dekHtml = homeLanguage === 'original'
+      ? (a.format === 'html' ? sanitizeRichHtml(a.dek) : escapeHtml(a.dek))
+      : escapeHtml(copy.dek);
     return `
       <div class="lead-story" data-open-id="${a.id}">
         ${a.imageUrl ? `<img class="lead-image" src="${a.imageUrl}" alt="">` : ''}
         <span class="eyebrow">${a.category} • Featured</span>
-        <h1>${escapeHtml(a.title)}</h1>
+        <h1>${escapeHtml(copy.title)}</h1>
         <p class="dek">${dekHtml}</p>
         <div class="byline">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
       </div>
@@ -872,16 +968,61 @@ async function uploadVideoToCloudinary(file){
   }
 
   function renderCard(a){
-    const dekPlain = a.format === 'html' ? stripHtml(a.dek) : a.dek;
+    const copy = homeArticleText(a);
     return `
       <div class="article-card" data-open-id="${a.id}">
         ${a.imageUrl ? `<img class="card-image" src="${a.imageUrl}" alt="">` : ''}
         <span class="eyebrow">${a.category}</span>
-        <h2>${escapeHtml(a.title)}</h2>
-        <p>${escapeHtml(excerpt(dekPlain, 110))}</p>
+        <h2>${escapeHtml(copy.title)}</h2>
+        <p>${escapeHtml(excerpt(copy.dek, 110))}</p>
         <div class="byline">By ${escapeHtml(a.author)} · ${fmtDate(a.date)}</div>
       </div>
     `;
+  }
+
+  function homeArticleText(a){
+    const originalDek = a.format === 'html' ? stripHtml(a.dek) : a.dek;
+    if(homeLanguage === 'original') return {title:a.title, dek:originalDek};
+    const translated = homeTranslations.get(`${a.id}:${homeLanguage}`);
+    return translated || {title:a.title, dek:originalDek};
+  }
+
+  async function setHomeLanguage(lang, btn){
+    if(lang === homeLanguage) return;
+    const buttons = document.querySelectorAll('#homeLangRow .lang-btn');
+    const status = document.getElementById('homeLangStatus');
+
+    if(lang === 'original'){
+      homeLanguage = lang;
+      buttons.forEach(b=>b.classList.toggle('active', b===btn));
+      status.style.display = 'none';
+      render();
+      return;
+    }
+
+    buttons.forEach(b=>b.disabled = true);
+    status.style.display = 'inline';
+    status.textContent = 'Translating headlines…';
+    try{
+      await Promise.all(articles.map(async a=>{
+        const key = `${a.id}:${lang}`;
+        if(homeTranslations.has(key)) return;
+        const dek = a.format === 'html' ? stripHtml(a.dek) : a.dek;
+        const [title, translatedDek] = await Promise.all([
+          translateText(a.title, lang),
+          translateText(dek, lang)
+        ]);
+        homeTranslations.set(key, {title, dek:translatedDek});
+      }));
+      homeLanguage = lang;
+      buttons.forEach(b=>b.classList.toggle('active', b===btn));
+      status.style.display = 'none';
+      render();
+    }catch(e){
+      status.textContent = 'Translation failed — try again.';
+    } finally {
+      buttons.forEach(b=>b.disabled = false);
+    }
   }
 
   // ---------- reader modal ----------
@@ -910,6 +1051,15 @@ async function uploadVideoToCloudinary(file){
           <h1>${escapeHtml(a.title)}</h1>
           <p class="modal-dek">${a.format === 'html' ? sanitizeRichHtml(a.dek) : escapeHtml(a.dek)}</p>
           <div class="byline" style="margin-bottom:18px;">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
+          <div class="lang-row" id="langRow">
+            <span class="lang-label">Read in:</span>
+            <button class="lang-btn active" data-lang="original">Original</button>
+            <button class="lang-btn" data-lang="en">English</button>
+            <button class="lang-btn" data-lang="fr">Français</button>
+            <button class="lang-btn" data-lang="es">Español</button>
+            <button class="lang-btn" data-lang="ht">Kreyòl</button>
+            <span class="lang-status" id="langStatus"></span>
+          </div>
           <div class="modal-body${a.format === 'html' ? ' modal-body-html' : ''}">${a.format === 'html' ? sanitizeRichHtml(a.body) : escapeHtml(a.body)}</div>
           <div class="modal-actions">
             <button id="copyLinkBtn">Copy Link</button>
@@ -942,6 +1092,56 @@ async function uploadVideoToCloudinary(file){
         }
       }
     }));
+
+    document.querySelectorAll('#langRow .lang-btn').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        if(btn.classList.contains('active')) return;
+        const lang = btn.getAttribute('data-lang');
+        const titleEl = document.querySelector('#readerOverlay h1');
+        const dekEl = document.querySelector('#readerOverlay .modal-dek');
+        const bodyEl = document.querySelector('#readerOverlay .modal-body');
+        const statusEl = document.getElementById('langStatus');
+
+        if(lang === 'original'){
+          document.querySelectorAll('#langRow .lang-btn').forEach(b=>b.classList.remove('active'));
+          btn.classList.add('active');
+          titleEl.textContent = a.title;
+          dekEl.innerHTML = a.format === 'html' ? sanitizeRichHtml(a.dek) : escapeHtml(a.dek);
+          bodyEl.classList.toggle('modal-body-html', a.format === 'html');
+          bodyEl.innerHTML = a.format === 'html' ? sanitizeRichHtml(a.body) : escapeHtml(a.body);
+          statusEl.style.display = 'none';
+          return;
+        }
+
+        document.querySelectorAll('#langRow .lang-btn').forEach(b=>{ b.disabled = true; });
+        statusEl.style.display = 'inline';
+        statusEl.textContent = 'Translating…';
+
+        try{
+          const titlePlain = a.title;
+          const dekPlain = a.format === 'html' ? stripHtml(a.dek) : a.dek;
+          const bodyPlain = a.format === 'html' ? stripHtml(a.body) : a.body;
+
+          const [tTitle, tDek, tBody] = await Promise.all([
+            translateText(titlePlain, lang),
+            translateText(dekPlain, lang),
+            translateText(bodyPlain, lang)
+          ]);
+
+          document.querySelectorAll('#langRow .lang-btn').forEach(b=>b.classList.remove('active'));
+          btn.classList.add('active');
+          titleEl.textContent = tTitle;
+          dekEl.textContent = tDek;
+          bodyEl.classList.remove('modal-body-html');
+          bodyEl.textContent = tBody;
+          statusEl.style.display = 'none';
+        }catch(e){
+          statusEl.textContent = 'Translation failed — try again.';
+        } finally {
+          document.querySelectorAll('#langRow .lang-btn').forEach(b=>{ b.disabled = false; });
+        }
+      });
+    });
   }
 
   function closeReader(){
@@ -955,6 +1155,42 @@ async function uploadVideoToCloudinary(file){
 
   function closeModal(){
     document.getElementById('modalRoot').innerHTML = '';
+  }
+
+  function openLegalModal(kind){
+    const isTerms = kind === 'terms';
+    const title = isTerms ? 'Terms of Service' : 'Privacy Policy';
+    const content = isTerms ? `
+      <p><strong>Terms of Service — Metro-Gazette</strong></p>
+      <p>Welcome to Metro-Gazette (“we,” “our,” “us”). By accessing or using our website, you agree to the following Terms of Service. Please read them carefully.</p>
+      <h2>1. Acceptance of Terms</h2><p>By using Metro-Gazette, you agree to comply with these Terms of Service and all applicable laws. If you do not agree, please discontinue use of the website.</p>
+      <h2>2. Use of the Website</h2><p>You may use Metro-Gazette for lawful purposes only. You agree not to:</p><ul><li>Engage in activities that disrupt website functionality</li><li>Attempt unauthorized access to our systems</li><li>Use automated tools (bots, scrapers) without permission</li><li>Post or distribute harmful, illegal, or misleading content</li></ul>
+      <h2>3. Intellectual Property</h2><p>All content published on Metro-Gazette—including articles, images, graphics, logos, and layout—is owned by Metro-Gazette or used with permission.</p><p>You may not:</p><ul><li>Copy, reproduce, or republish our content without authorization</li><li>Use our branding for commercial purposes</li><li>Modify or distribute our content without written consent</li></ul>
+      <h2>4. User-Submitted Content</h2><p>If you submit comments, messages, or other content:</p><ul><li>You grant us a non-exclusive license to display and use that content</li><li>You confirm that your submission does not violate any laws or rights</li><li>We reserve the right to remove content that violates our policies</li></ul>
+      <h2>5. Third-Party Links</h2><p>Metro-Gazette may contain links to external websites. We are not responsible for:</p><ul><li>The content on those websites</li><li>Their privacy practices</li><li>Any damages resulting from visiting third-party sites</li></ul><p>You access external links at your own risk.</p>
+      <h2>6. Advertising and Sponsored Content</h2><p>Metro-Gazette may display advertisements or sponsored content from third-party partners. We do not guarantee:</p><ul><li>The accuracy of advertiser claims</li><li>The quality of advertised products or services</li></ul><p>Any interactions with advertisers are solely between you and the advertiser.</p>
+      <h2>7. Disclaimer of Warranties</h2><p>Metro-Gazette is provided “as is” and “as available.” We do not guarantee:</p><ul><li>Continuous, error-free operation</li><li>Accuracy or completeness of content</li><li>Protection from viruses or harmful components</li></ul><p>You use the website at your own risk.</p>
+      <h2>8. Limitation of Liability</h2><p>Metro-Gazette is not liable for:</p><ul><li>Any direct, indirect, incidental, or consequential damages</li><li>Loss of data, profits, or business opportunities</li><li>Issues arising from use or inability to use the website</li></ul><p>This limitation applies to all users to the fullest extent permitted by law.</p>
+      <h2>9. Changes to Terms</h2><p>We may update these Terms of Service at any time. Changes will be posted on this page with an updated “Last Updated” date. Continued use of the website means you accept the revised terms.</p>
+      <h2>10. Governing Law</h2><p>These Terms of Service are governed by the laws of the Dominican Republic. Any disputes will be handled under local jurisdiction.</p>
+      <h2>11. Contact Us</h2><p>For questions about these Terms of Service, contact us at: <a href="mailto:allservicesfrd@gmail.com">allservicesfrd@gmail.com</a></p><p>Metro-Gazette<br>Email: <a href="mailto:allservicesfrd@gmail.com">allservicesfrd@gmail.com</a></p>
+    ` : `
+      <p><strong>Privacy Policy — Metro-Gazette</strong></p>
+      <p>Metro-Gazette (“we,” “our,” “us”) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard information when you visit our website.</p><p>By accessing Metro-Gazette, you agree to the terms described in this policy.</p>
+      <h2>1. Information We Collect</h2><p><strong>a. Automatically Collected Data</strong></p><p>When you visit our website, certain information may be collected automatically, including:</p><ul><li>IP address</li><li>Browser type and version</li><li>Device information</li><li>Pages visited</li><li>Time spent on the site</li><li>Referring websites</li></ul><p>This data helps us improve website performance and user experience.</p><p><strong>b. Cookies and Tracking Technologies</strong></p><p>We use cookies and similar technologies to:</p><ul><li>Analyze website traffic</li><li>Personalize content</li><li>Display relevant advertisements</li></ul><p>You can disable cookies in your browser settings, but some features may not function properly.</p><p><strong>c. Voluntary Information</strong></p><p>If you contact us or subscribe to updates, we may collect:</p><ul><li>Name</li><li>Email address</li><li>Any information you choose to provide</li></ul>
+      <h2>2. Use of Your Information</h2><p>We use collected information to:</p><ul><li>Improve website functionality</li><li>Provide relevant news content</li><li>Analyze user behavior</li><li>Display personalized advertisements</li><li>Respond to inquiries or messages</li></ul>
+      <h2>3. Advertising and Third-Party Services</h2><p>Metro-Gazette may use third-party advertising networks such as:</p><ul><li>Google AdSense</li><li>Media.net</li><li>Ezoic</li><li>Other ad partners</li></ul><p>These partners may use cookies, web beacons, or similar technologies to:</p><ul><li>Display personalized ads</li><li>Measure ad performance</li><li>Track user interactions</li></ul><p>Third-party advertisers may collect information according to their own privacy policies.</p>
+      <h2>4. Links to External Websites</h2><p>Our website may contain links to external sites. We are not responsible for the content or privacy practices of those websites. We encourage users to review the privacy policies of any external site they visit.</p>
+      <h2>5. Data Protection</h2><p>We implement reasonable security measures to protect your information. However, no online system is completely secure, and we cannot guarantee absolute protection.</p>
+      <h2>6. Children’s Privacy</h2><p>Metro-Gazette does not knowingly collect personal information from children under 13. If we learn that such information has been collected, we will delete it promptly.</p>
+      <h2>7. Your Choices</h2><p>You may:</p><ul><li>Disable cookies through your browser</li><li>Opt out of personalized ads through Google’s Ads Settings</li><li>Contact us to request deletion of voluntarily submitted information</li></ul>
+      <h2>8. Changes to This Policy</h2><p>We may update this Privacy Policy periodically. Changes will be posted on this page with an updated “Last Updated” date.</p>
+      <h2>9. Contact Us</h2><p>If you have questions about this Privacy Policy, you may contact us at: <a href="mailto:allservicesfrd@gmail.com">allservicesfrd@gmail.com</a></p><p>Metro-Gazette<br>Email: <a href="mailto:allservicesfrd@gmail.com">allservicesfrd@gmail.com</a></p>
+    `;
+    const root = document.getElementById('modalRoot');
+    root.innerHTML = `<div class="modal-overlay" id="legalOverlay"><div class="modal legal-modal"><button class="modal-close" aria-label="Close" id="legalClose">×</button><h1>${title}</h1><div class="legal-content">${content}</div></div></div>`;
+    document.getElementById('legalClose').addEventListener('click', closeModal);
+    document.getElementById('legalOverlay').addEventListener('click', e=>{ if(e.target.id === 'legalOverlay') closeModal(); });
   }
 
   window.addEventListener('popstate', ()=>{
@@ -1334,6 +1570,17 @@ async function uploadVideoToCloudinary(file){
     activeCat = btn.getAttribute('data-cat');
     document.querySelectorAll('#sectionNav button[data-cat]').forEach(b=>b.classList.toggle('active', b===btn));
     render();
+  });
+
+  document.querySelectorAll('#homeLangRow .lang-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=> setHomeLanguage(btn.getAttribute('data-lang'), btn));
+  });
+
+  document.querySelectorAll('[data-legal]').forEach(link=>{
+    link.addEventListener('click', e=>{
+      e.preventDefault();
+      openLegalModal(link.getAttribute('data-legal'));
+    });
   });
 
   document.getElementById('writeBtn').addEventListener('click', ()=> requireUnlock(()=> openEditor(null)));
