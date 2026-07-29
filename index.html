@@ -300,13 +300,6 @@
   }
   .modal .modal-body{font-size:17px;line-height:1.7;color:#2a2a2a;white-space:pre-wrap;}
   .modal .modal-body.modal-body-html{white-space:normal;}
-  .legal-modal{max-width:800px;}
-  .legal-content{font-size:16px;line-height:1.65;color:#2a2a2a;}
-  .legal-content h2{font-family:'Playfair Display',serif;font-size:21px;color:var(--navy);margin:26px 0 8px;}
-  .legal-content h2:first-child{margin-top:0;}
-  .legal-content p{margin:0 0 14px;}
-  .legal-content ul{margin:0 0 14px 1.25em;padding:0;}
-  .legal-content a{color:var(--gold-dark);text-decoration:underline;}
   .modal .modal-dek{
     font-size:18px;line-height:1.5;color:#3a3a3a;margin:10px 0 14px;font-style:italic;
   }
@@ -567,9 +560,9 @@
   <span class="fname">METRO GAZETTE</span>
   Published locally. Written honestly. — News That Matters
   <div class="footer-links">
-    <a href="#privacy-policy" data-legal="privacy">Privacy Policy</a>
+    <a href="privacy-policy.html">Privacy Policy</a>
     <span class="footer-divider">|</span>
-    <a href="#terms-of-service" data-legal="terms">Terms of Service</a>
+    <a href="terms-of-service.html">Terms of Service</a>
     <span class="footer-divider">|</span>
     <a href="mailto:allservicesfrd@gmail.com">Contact</a>
   </div>
@@ -915,10 +908,14 @@ async function uploadVideoToCloudinary(file){
     const chunks = chunkText(text, MYMEMORY_MAX_CHARS);
     const results = [];
     for(const chunk of chunks){
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=autodetect|${targetLang}`;
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=autodetect|${targetLang}&de=allservicesfrd@gmail.com`;
       const res = await fetch(url);
       const data = await res.json();
-      results.push(data?.responseData?.translatedText || chunk);
+      const translated = data?.responseData?.translatedText;
+      if(!res.ok || !translated || translated.includes('MYMEMORY WARNING')){
+        throw new Error('Translation temporarily unavailable');
+      }
+      results.push(translated);
     }
     return results.join('\n\n');
   }
@@ -1574,13 +1571,6 @@ async function uploadVideoToCloudinary(file){
 
   document.querySelectorAll('#homeLangRow .lang-btn').forEach(btn=>{
     btn.addEventListener('click', ()=> setHomeLanguage(btn.getAttribute('data-lang'), btn));
-  });
-
-  document.querySelectorAll('[data-legal]').forEach(link=>{
-    link.addEventListener('click', e=>{
-      e.preventDefault();
-      openLegalModal(link.getAttribute('data-legal'));
-    });
   });
 
   document.getElementById('writeBtn').addEventListener('click', ()=> requireUnlock(()=> openEditor(null)));
