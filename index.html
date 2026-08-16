@@ -516,7 +516,7 @@
     <button data-cat="World">World</button>
     <div class="spacer"></div>
     <button class="unlock-status" id="unlockStatus" style="display:none;"><span class="dot-lit"></span>Editor unlocked</button>
-    <button class="write-btn" id="writeBtn">🔒 Write Article</button>
+    <button class="write-btn" id="writeBtn" style="display:none;">Write Article</button>
   </div>
 </nav>
 
@@ -544,7 +544,7 @@
       <div class="sidebar-box">
         <div class="spotlight-header">
           <h3>Business Spotlight</h3>
-          <button class="add-spotlight-btn" id="addSpotlightBtn">🔒 + Add</button>
+          <button class="add-spotlight-btn" id="addSpotlightBtn" style="display:none;">+ Add</button>
         </div>
         <div id="spotlightList"></div>
       </div>
@@ -1263,12 +1263,14 @@ async function uploadVideoToCloudinary(file){
     if(isUnlocked){
       statusBtn.style.display = 'inline-flex';
       statusBtn.innerHTML = `<span class="dot-lit"></span>${escapeHtml(currentUserEmail)} · Log out`;
+      writeBtn.style.display = 'inline-block';
       writeBtn.textContent = '✎ Write Article';
+      addSpotlightBtn.style.display = 'inline-block';
       addSpotlightBtn.textContent = '+ Add';
     } else {
       statusBtn.style.display = 'none';
-      writeBtn.textContent = '🔒 Write Article';
-      addSpotlightBtn.textContent = '🔒 + Add';
+      writeBtn.style.display = 'none';
+      addSpotlightBtn.style.display = 'none';
     }
     renderSpotlights();
   }
@@ -1601,6 +1603,12 @@ async function uploadVideoToCloudinary(file){
     isUnlocked = !!user;
     currentUserEmail = user ? user.email : "";
     updateUnlockIndicator();
+    if(!user && new URLSearchParams(window.location.search).get('editor') === 'login'){
+      const url = new URL(window.location.href);
+      url.searchParams.delete('editor');
+      history.replaceState({}, '', url);
+      requireUnlock(()=> openEditor(null));
+    }
   });
 
   subscribeArticles();
