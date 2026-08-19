@@ -678,6 +678,47 @@ async function uploadVideoToCloudinary(file){
     return clean.length > n ? clean.slice(0,n).trim() + '…' : clean;
   }
 
+  function slugify(value){
+    const slug = String(value || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().trim()
+      .replace(/['’]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    return slug || 'article';
+  }
+
+  function createUniqueSlug(title, currentId){
+    const base = slugify(title);
+    const used = new Set(articles.filter(a=>a.id !== currentId).map(a=>a.slug).filter(Boolean));
+    if(!used.has(base)) return base;
+    let suffix = 2;
+    while(used.has(`${base}-${suffix}`)) suffix += 1;
+    return `${base}-${suffix}`;
+  }
+
+  function getRouteArticleSlug(){
+    const match = window.location.pathname.match(/^\/article\/([^/]+)\/?$/i);
+    if(!match) return '';
+    try { return decodeURIComponent(match[1]).toLowerCase(); }
+    catch(e) { return ''; }
+  }
+
+  function findArticleForCurrentRoute(){
+    const slug = getRouteArticleSlug();
+    if(slug) return articles.find(a=>a.slug === slug) || null;
+    const legacyId = new URLSearchParams(window.location.search).get('article');
+    return legacyId ? articles.find(a=>a.id === legacyId) || null : null;
+  }
+
+  function articlePath(article){
+    return article.slug ? `/article/${encodeURIComponent(article.slug)}` : `/?article=${encodeURIComponent(article.id)}`;
+  }
+
+  function articleUrl(article){
+    return `${SITE_URL}${articlePath(article)}`;
+  }
+
   function fmtDate(iso){
     return new Date(iso).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
   }
@@ -693,9 +734,9 @@ async function uploadVideoToCloudinary(file){
       render();
       if(!initialArticleChecked){
         initialArticleChecked = true;
-        const id = new URLSearchParams(window.location.search).get('article');
-        if(id && articles.find(x=>x.id===id)){
-          openReader(id, {skipPush:true});
+        const article = findArticleForCurrentRoute();
+        if(article){
+          openReader(article.id, {skipPush:true});
         }
       }
     }, (err)=>{
@@ -1003,7 +1044,7 @@ async function uploadVideoToCloudinary(file){
   }
 
   function updateSocialMetadata(article){
-    const url = article ? `${SITE_URL}/?article=${encodeURIComponent(article.id)}` : `${SITE_URL}/`;
+    const url = article ? articleUrl(article) : `${SITE_URL}/`;
     const title = article ? article.title : 'Metro Gazette — News That Matters';
     const description = article
       ? (stripHtml(article.dek) || excerpt(stripHtml(article.body), 160))
@@ -1075,9 +1116,7 @@ async function uploadVideoToCloudinary(file){
     const a = articles.find(x=>x.id===id);
     if(!a) return;
     if(!opts || !opts.skipPush){
-      const url = new URL(window.location.href);
-      url.searchParams.set('article', id);
-      history.pushState({articleId:id}, '', url);
+      history.pushState({articleId:id}, '', articlePath(a));
     }
     updateSocialMetadata(a);
     if(typeof gtag === 'function'){
@@ -1120,7 +1159,7 @@ async function uploadVideoToCloudinary(file){
     });
     document.getElementById('readerClose').addEventListener('click', closeReader);
     document.getElementById('copyLinkBtn').addEventListener('click', async ()=>{
-      const shareUrl = `${SITE_URL}/?article=${encodeURIComponent(id)}`;
+      const shareUrl = articleUrl(a);
       try{
         await navigator.clipboard.writeText(shareUrl);
         toast('Link copied — ready for Facebook/X.');
@@ -1191,11 +1230,7 @@ async function uploadVideoToCloudinary(file){
   }
 
   function closeReader(){
-    const url = new URL(window.location.href);
-    if(url.searchParams.has('article')){
-      url.searchParams.delete('article');
-      history.pushState({}, '', url);
-    }
+    history.pushState({}, '', '/');
     updateSocialMetadata(null);
     closeModal();
   }
@@ -1241,9 +1276,9 @@ async function uploadVideoToCloudinary(file){
   }
 
   window.addEventListener('popstate', ()=>{
-    const id = new URLSearchParams(window.location.search).get('article');
-    if(id){
-      if(articles.find(x=>x.id===id)) openReader(id, {skipPush:true});
+    const article = findArticleForCurrentRoute();
+    if(article){
+      openReader(article.id, {skipPush:true});
     } else {
       updateSocialMetadata(null);
       closeModal();
@@ -1445,6 +1480,7 @@ async function uploadVideoToCloudinary(file){
 
       const record = {
         title,
+        slug: createUniqueSlug(title, isEdit ? a.id : null),
         category,
         author,
         dek: dek || plainToEditableHtml(excerpt(bodyPlain, 140)),
