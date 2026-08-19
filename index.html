@@ -1120,7 +1120,7 @@ async function uploadVideoToCloudinary(file){
     });
     document.getElementById('readerClose').addEventListener('click', closeReader);
     document.getElementById('copyLinkBtn').addEventListener('click', async ()=>{
-      const shareUrl = `https://metro-preview-surf-a4a9.clydeberk581.workers.dev/?article=${id}`;
+      const shareUrl = `${SITE_URL}/?article=${encodeURIComponent(id)}`;
       try{
         await navigator.clipboard.writeText(shareUrl);
         toast('Link copied — ready for Facebook/X.');
