@@ -641,6 +641,29 @@ async function uploadVideoToCloudinary(file){
   return data.secure_url;
 }
 
+async function compressImageForUpload(file){
+  // Keep uploads small enough for fast publishing while retaining a useful
+  // resolution for the Spotlight thumbnail and destination preview.
+  if(!file || !file.type.startsWith('image/')) return file;
+
+  const bitmap = await createImageBitmap(file);
+  const maxDimension = 1600;
+  const scale = Math.min(1, maxDimension / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  const blob = await new Promise((resolve, reject)=>{
+    canvas.toBlob(result => result ? resolve(result) : reject(new Error('Image compression failed')), 'image/jpeg', 0.82);
+  });
+  const filename = (file.name || 'spotlight-image').replace(/\.[^.]+$/, '') + '.jpg';
+  return new File([blob], filename, {type:'image/jpeg'});
+}
+
 (function(){
   const CATS = ["Local","Business","Sports","Opinion","World"];
   const SITE_URL = 'https://metrogazette.net';
@@ -790,6 +813,7 @@ async function uploadVideoToCloudinary(file){
       await addDoc(spotlightsRef, record);
       return true;
     }catch(e){
+      console.error('Could not create business spotlight in Firestore.', {error:e, record});
       toast('Could not publish — please try again.');
       return false;
     }
@@ -800,6 +824,7 @@ async function uploadVideoToCloudinary(file){
       await updateDoc(doc(db, "spotlights", id), record);
       return true;
     }catch(e){
+      console.error('Could not update business spotlight in Firestore.', {error:e, id, record});
       toast('Could not save changes — please try again.');
       return false;
     }
@@ -1544,7 +1569,7 @@ async function uploadVideoToCloudinary(file){
           </div>
           <div class="editor-field">
             <label for="fBizBlurb">Short blurb</label>
-            <textarea id="fBizBlurb" style="min-height:70px;" placeholder="What they offer, in a sentence or two...">${escapeHtml(s.blurb)}</textarea>
+            <textarea id="fBizBlurb" style="min-height:70px;" placeholder="What they offer, in a sentence or two...">${escapeHtml(s.blurb || '')}</textarea>
           </div>
           <div>
             <button class="editor-save" id="saveBizBtn">${isEdit ? 'Save Changes' : 'Publish'}</button>
@@ -1593,14 +1618,16 @@ async function uploadVideoToCloudinary(file){
       if(!file) return;
       const isVideo = file.type.startsWith('video/');
       status.style.display = 'block';
-      status.textContent = isVideo ? 'Uploading video…' : 'Uploading photo…';
+      status.textContent = isVideo ? 'Uploading video…' : 'Compressing and uploading photo…';
       try{
-        const url = isVideo ? await uploadVideoToCloudinary(file) : await uploadToCloudinary(file);
+        const uploadFile = isVideo ? file : await compressImageForUpload(file);
+        const url = isVideo ? await uploadVideoToCloudinary(uploadFile) : await uploadToCloudinary(uploadFile);
         pendingMediaUrl = url;
         pendingMediaType = isVideo ? 'video' : 'image';
         renderPreview(url, pendingMediaType);
         status.style.display = 'none';
       }catch(e){
+        console.error('Could not upload Business Spotlight media.', {error:e, fileName:file.name, fileType:file.type});
         status.textContent = 'Upload failed — try a different file.';
       }
     });
@@ -1624,6 +1651,8 @@ async function uploadVideoToCloudinary(file){
         return;
       }
 
+      // Media and blurb are intentionally optional; Firestore receives null or
+      // an empty string when the editor leaves them blank.
       const record = {
         name,
         link,
