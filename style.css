@@ -171,6 +171,26 @@
   font-weight: 700;
 }
 
+/* Permanent social links in the right sidebar. */
+.follow-us h3 {
+  margin: 0 0 14px;
+}
+
+.follow-us__link {
+  display: block;
+}
+
+.follow-us__link + .follow-us__link {
+  margin-top: 12px;
+}
+
+.follow-us__link img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+}
+
 @media (max-width: 800px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
