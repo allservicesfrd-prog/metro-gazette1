@@ -20,14 +20,20 @@
  */
 .ad-container {
   position: relative;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   width: 100%;
   overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Do not show an empty placeholder while AdSense is unavailable or unfilled. */
+.ad-container:has(ins[data-ad-status="filled"]),
+.ad-container:has(iframe) {
+  display: flex;
   background: #fff;
   border: 1px solid var(--rule);
-  box-sizing: border-box;
 }
 
 .ad-container--leaderboard {
@@ -53,6 +59,108 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #777;
+}
+
+/* Business Spotlight: a full-width featured-placement card rather than a list item. */
+.business-spotlight {
+  padding: 0;
+  overflow: hidden;
+}
+
+.business-spotlight .spotlight-header {
+  margin: 0;
+  padding: 18px 20px 12px;
+}
+
+#spotlightList {
+  display: grid;
+  gap: 14px;
+  padding: 0 14px 14px;
+}
+
+.spotlight-card {
+  width: 100%;
+  overflow: hidden;
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: 3px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+  cursor: pointer;
+}
+
+.spotlight-media {
+  display: block;
+  width: 100%;
+  height: 170px;
+  object-fit: cover;
+  background: var(--navy-tint);
+}
+
+.spotlight-media--empty {
+  background: linear-gradient(135deg, var(--gold-dark), var(--navy));
+}
+
+.spotlight-card__content {
+  padding: 16px;
+}
+
+.spotlight-category {
+  display: block;
+  margin-bottom: 5px;
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-dark);
+}
+
+.business-spotlight .spotlight-name {
+  margin: 0 0 8px;
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  line-height: 1.1;
+  color: var(--navy);
+}
+
+.business-spotlight .spotlight-blurb {
+  margin: 0 0 16px;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  font-family: 'Source Serif 4', serif;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #333;
+}
+
+.spotlight-cta {
+  display: block;
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--gold-dark);
+  color: #fff;
+  border-radius: 2px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.spotlight-cta:hover {
+  background: var(--navy);
+}
+
+.business-spotlight .spotlight-edit {
+  margin-top: 10px;
+  padding: 0;
+  color: var(--gold-dark);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 @media (max-width: 800px) {

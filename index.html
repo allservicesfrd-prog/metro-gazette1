@@ -549,7 +549,6 @@
   <div class="layout" id="layoutRoot" style="display:none;">
     <div class="content-column">
       <div class="ad-container ad-container--leaderboard" data-ad-placement="top-content" aria-label="Advertisement">
-        <span class="ad-container__label">Advertisement</span>
       </div>
       <div id="leadSlot"></div>
       <div class="grid-articles" id="gridSlot"></div>
@@ -560,9 +559,8 @@
         <div id="sidebarList"></div>
       </div>
       <div class="ad-container ad-container--sidebar" data-ad-placement="sidebar" aria-label="Advertisement">
-        <span class="ad-container__label">Advertisement</span>
       </div>
-      <div class="sidebar-box">
+      <div class="sidebar-box business-spotlight">
         <div class="spotlight-header">
           <h3>Business Spotlight</h3>
           <button class="add-spotlight-btn" id="addSpotlightBtn" style="display:none;">+ Add</button>
@@ -916,23 +914,26 @@ async function compressImageForUpload(file){
     list.innerHTML = spotlights.map(s=>{
       const mediaUrl = s.mediaUrl || s.imageUrl || '';
       const isVideo = s.mediaType === 'video';
-      const thumbHtml = isVideo
-        ? (mediaUrl ? `<video class="spotlight-thumb" src="${mediaUrl}" muted loop playsinline autoplay></video>` : `<div class="spotlight-thumb"></div>`)
-        : `<div class="spotlight-thumb" style="${mediaUrl ? `background-image:url('${mediaUrl}')` : ''}"></div>`;
+      const mediaHtml = isVideo
+        ? (mediaUrl ? `<video class="spotlight-media" src="${escapeAttr(mediaUrl)}" muted loop playsinline autoplay></video>` : `<div class="spotlight-media spotlight-media--empty"></div>`)
+        : (mediaUrl ? `<img class="spotlight-media" src="${escapeAttr(mediaUrl)}" alt="${escapeAttr(s.name || 'Featured business')}">` : `<div class="spotlight-media spotlight-media--empty"></div>`);
+      const category = s.category || 'Local Business';
       return `
-      <div class="spotlight-item" data-visit="${s.id}">
-        ${thumbHtml}
-        <div class="spotlight-info">
-          <div class="spotlight-name">${escapeHtml(s.name)}</div>
-          <div class="spotlight-blurb">${escapeHtml(s.blurb || '')}</div>
+      <article class="spotlight-card" data-visit="${s.id}">
+        ${mediaHtml}
+        <div class="spotlight-card__content">
+          <span class="spotlight-category">${escapeHtml(category)}</span>
+          <h4 class="spotlight-name">${escapeHtml(s.name || 'Featured business')}</h4>
+          ${s.blurb ? `<p class="spotlight-blurb">${escapeHtml(s.blurb)}</p>` : ''}
+          ${s.link ? `<a class="spotlight-cta" href="${escapeAttr(s.link)}" target="_blank" rel="noopener">Visit Website</a>` : ''}
+          ${isUnlocked ? `<button class="spotlight-edit" data-edit="${s.id}" title="Edit this spotlight">Edit</button>` : ''}
         </div>
-        ${isUnlocked ? `<button class="spotlight-edit" data-edit="${s.id}" title="Edit">✎</button>` : ''}
-      </div>
+      </article>
     `;}).join('');
 
     list.querySelectorAll('[data-visit]').forEach(el=>{
       el.addEventListener('click', (e)=>{
-        if(e.target.closest('[data-edit]')) return;
+        if(e.target.closest('[data-edit], a')) return;
         const s = spotlights.find(x=>x.id===el.getAttribute('data-visit'));
         if(s && s.link) window.open(s.link, '_blank', 'noopener');
       });
@@ -1564,7 +1565,7 @@ async function compressImageForUpload(file){
   // ---------- business spotlight editor modal ----------
   function openSpotlightEditor(existing){
     const isEdit = !!existing;
-    const s = existing || {id:null, name:'', link:'', blurb:'', mediaUrl:'', mediaType:'image', date:new Date().toISOString()};
+    const s = existing || {id:null, name:'', category:'', link:'', blurb:'', mediaUrl:'', mediaType:'image', date:null};
     const existingMediaUrl = s.mediaUrl || s.imageUrl || '';
     const existingMediaType = s.mediaType || (existingMediaUrl ? 'image' : 'image');
     let pendingMediaUrl = existingMediaUrl || null;
@@ -1578,6 +1579,10 @@ async function compressImageForUpload(file){
           <div class="editor-field">
             <label for="fBizName">Business name</label>
             <input id="fBizName" type="text" value="${escapeAttr(s.name)}" placeholder="e.g. Corner Bakery">
+          </div>
+          <div class="editor-field">
+            <label for="fBizCategory">Business category</label>
+            <input id="fBizCategory" type="text" value="${escapeAttr(s.category || '')}" placeholder="e.g. Restaurant, Retail, Professional services">
           </div>
           <div class="editor-field">
             <label for="fBizLink">Website or social link</label>
@@ -1670,6 +1675,7 @@ async function compressImageForUpload(file){
 
     document.getElementById('saveBizBtn').addEventListener('click', async ()=>{
       const name = document.getElementById('fBizName').value.trim();
+      const category = document.getElementById('fBizCategory').value.trim() || 'Local Business';
       const link = document.getElementById('fBizLink').value.trim();
       const blurb = document.getElementById('fBizBlurb').value.trim();
 
@@ -1682,6 +1688,7 @@ async function compressImageForUpload(file){
       // an empty string when the editor leaves them blank.
       const record = {
         name,
+        category,
         link,
         blurb,
         mediaUrl: pendingMediaUrl || null,
