@@ -592,7 +592,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
+  getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, serverTimestamp,
   onSnapshot, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
@@ -612,7 +612,9 @@ const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 const auth = getAuth(fbApp);
 const articlesRef = collection(db, "articles");
-const spotlightsRef = collection(db, "spotlights");
+// This must remain aligned with the deployed Firestore rules.
+const SPOTLIGHT_COLLECTION = "spotlights";
+const spotlightsRef = collection(db, SPOTLIGHT_COLLECTION);
 
 const CLOUDINARY_CLOUD_NAME = "kukx1d9k";
 const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
@@ -809,11 +811,29 @@ async function compressImageForUpload(file){
   }
 
   async function createSpotlight(record){
+    const user = auth.currentUser;
+    if(!user){
+      console.error('Could not create business spotlight: no authenticated Firebase user.', {
+        collection: SPOTLIGHT_COLLECTION
+      });
+      toast('Please log in before publishing.');
+      return false;
+    }
     try{
+      // The Firebase SDK attaches this signed-in user's token to addDoc().
+      // Refresh it first so a just-restored editor session has a valid token.
+      await user.getIdToken();
       await addDoc(spotlightsRef, record);
       return true;
     }catch(e){
-      console.error('Could not create business spotlight in Firestore.', {error:e, record});
+      console.error('Could not create business spotlight in Firestore.', {
+        error:e,
+        code:e?.code,
+        message:e?.message,
+        collection:SPOTLIGHT_COLLECTION,
+        userId:user.uid,
+        record
+      });
       toast('Could not publish — please try again.');
       return false;
     }
@@ -1660,7 +1680,7 @@ async function compressImageForUpload(file){
         mediaUrl: pendingMediaUrl || null,
         mediaType: pendingMediaUrl ? pendingMediaType : null,
         imageUrl: pendingMediaUrl && pendingMediaType === 'image' ? pendingMediaUrl : null,
-        date: isEdit ? s.date : new Date().toISOString()
+        date: serverTimestamp()
       };
 
       const saveBtn = document.getElementById('saveBizBtn');
