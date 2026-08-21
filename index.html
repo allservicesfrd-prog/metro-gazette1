@@ -578,9 +578,11 @@
       </section>
       <div class="subscribe-box">
         <h3>Get the Morning Edition</h3>
-        <p>Metro Gazette headlines, straight to your inbox. (Preview only — no email is sent.)</p>
-        <input type="email" placeholder="you@email.com" id="subEmail">
-        <button id="subBtn">Subscribe</button>
+        <p>Metro Gazette headlines, straight to your inbox.</p>
+        <form id="subscribeForm">
+          <input type="email" placeholder="you@email.com" id="subEmail" required>
+          <button id="subBtn" type="submit">Subscribe</button>
+        </form>
       </div>
     </aside>
   </div>
@@ -626,6 +628,7 @@ const fbApp = initializeApp(firebaseConfig);
 const db = getFirestore(fbApp);
 const auth = getAuth(fbApp);
 const articlesRef = collection(db, "articles");
+const subscribersRef = collection(db, "subscribers");
 // This must remain aligned with the deployed Firestore rules.
 const SPOTLIGHT_COLLECTION = "spotlights";
 const spotlightsRef = collection(db, SPOTLIGHT_COLLECTION);
@@ -1745,13 +1748,30 @@ async function compressImageForUpload(file){
 
   document.getElementById('addSpotlightBtn').addEventListener('click', ()=> requireUnlock(()=> openSpotlightEditor(null)));
 
-  document.getElementById('subBtn').addEventListener('click', ()=>{
+  document.getElementById('subscribeForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
     const val = document.getElementById('subEmail').value.trim();
-    if(val && val.includes('@')){
-      toast('Subscribed! (Preview only — connect an email service to make this live.)');
-      document.getElementById('subEmail').value = '';
-    } else {
+    const button = document.getElementById('subBtn');
+    if(!val || !document.getElementById('subEmail').checkValidity()){
       toast('Enter a valid email to subscribe.');
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'Subscribing…';
+    try{
+      await addDoc(subscribersRef, {
+        email: val.toLowerCase(),
+        subscribedAt: serverTimestamp()
+      });
+      document.getElementById('subEmail').value = '';
+      toast('You’re subscribed to the Morning Edition. Thank you!');
+    }catch(error){
+      console.error('Could not save newsletter subscriber in Firestore.', error);
+      toast('We could not save your subscription. Please try again.');
+    }finally{
+      button.disabled = false;
+      button.textContent = 'Subscribe';
     }
   });
 
