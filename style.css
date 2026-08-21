@@ -1,0 +1,70 @@
+/* Stable article/sidebar grid and reserved advertising slots. */
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 340px);
+  align-items: start;
+}
+
+.content-column,
+.sidebar-column {
+  min-width: 0;
+}
+
+.sidebar-column {
+  align-self: start;
+}
+
+/*
+ * Put AdSense <ins> elements inside these wrappers. The reserved dimensions
+ * prevent an ad iframe from moving article content after it loads.
+ */
+.ad-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid var(--rule);
+  box-sizing: border-box;
+}
+
+.ad-container--leaderboard {
+  min-height: 250px;
+  margin: 0 0 26px;
+}
+
+.ad-container--sidebar {
+  min-height: 280px;
+  margin: 0 0 24px;
+}
+
+.ad-container > ins,
+.ad-container iframe {
+  display: block;
+  max-width: 100%;
+  border: 0;
+}
+
+.ad-container__label {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #777;
+}
+
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ad-container--leaderboard {
+    min-height: 180px;
+  }
+
+  .ad-container--sidebar {
+    min-height: 250px;
+  }
+}
