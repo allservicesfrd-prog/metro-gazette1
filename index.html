@@ -535,7 +535,7 @@
   </div>
 </nav>
 
-<main>
+<main id="homePageMain">
   <div id="loadingRow" class="loading-row">Loading the presses…</div>
   <div class="lang-row home-lang-row" id="homeLangRow">
     <span class="lang-label">Read in:</span>
@@ -587,6 +587,8 @@
     </aside>
   </div>
 </main>
+
+<main id="articlePageRoot" class="article-page-root" hidden aria-live="polite"></main>
 
 <footer>
   <span class="fname">METRO GAZETTE</span>
@@ -1074,6 +1076,10 @@ async function compressImageForUpload(file){
     });
   }
 
+  function developingBadge(article){
+    return article.isDeveloping ? '<span class="developing-badge">Developing</span>' : '';
+  }
+
   function renderLead(a){
     const copy = homeArticleText(a);
     const dekHtml = homeLanguage === 'original'
@@ -1082,7 +1088,7 @@ async function compressImageForUpload(file){
     return `
       <div class="lead-story" data-open-id="${a.id}">
         ${a.imageUrl ? `<img class="lead-image" src="${a.imageUrl}" alt="">` : ''}
-        <span class="eyebrow">${a.category} • Featured</span>
+        <span class="eyebrow">${a.category} • Featured ${developingBadge(a)}</span>
         <h1>${escapeHtml(copy.title)}</h1>
         <p class="dek">${dekHtml}</p>
         <div class="byline">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
@@ -1095,7 +1101,7 @@ async function compressImageForUpload(file){
     return `
       <div class="article-card" data-open-id="${a.id}">
         ${a.imageUrl ? `<img class="card-image" src="${a.imageUrl}" alt="">` : ''}
-        <span class="eyebrow">${a.category}</span>
+        <span class="eyebrow">${a.category} ${developingBadge(a)}</span>
         <h2>${escapeHtml(copy.title)}</h2>
         <p>${escapeHtml(excerpt(copy.dek, 110))}</p>
         <div class="byline">By ${escapeHtml(a.author)} · ${fmtDate(a.date)}</div>
@@ -1176,7 +1182,7 @@ async function compressImageForUpload(file){
     }
   }
 
-  // ---------- reader modal ----------
+  // ---------- standalone article route ----------
   function openReader(id, opts){
     const a = articles.find(x=>x.id===id);
     if(!a) return;
@@ -1191,43 +1197,46 @@ async function compressImageForUpload(file){
         page_path: window.location.pathname + window.location.search
       });
     }
-    const root = document.getElementById('modalRoot');
+    const root = document.getElementById('articlePageRoot');
+    document.getElementById('homePageMain').hidden = true;
+    root.hidden = false;
+    const shareUrl = articleUrl(a);
+    const shareText = `${a.title} — ${shareUrl}`;
     root.innerHTML = `
-      <div class="modal-overlay" id="readerOverlay">
-        <div class="modal">
-          <button class="modal-close" aria-label="Close" id="readerClose">×</button>
-          ${a.imageUrl ? `<img class="modal-hero-image" src="${a.imageUrl}" alt="">` : ''}
-          <span class="eyebrow">${a.category}</span>
-          <h1>${escapeHtml(a.title)}</h1>
-          <p class="modal-dek">${a.format === 'html' ? sanitizeRichHtml(a.dek) : escapeHtml(a.dek)}</p>
-          <div class="byline" style="margin-bottom:18px;">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
-          <div class="lang-row" id="langRow">
-            <span class="lang-label">Read in:</span>
-            <button class="lang-btn active" data-lang="original">Original</button>
-            <button class="lang-btn" data-lang="en">English</button>
-            <button class="lang-btn" data-lang="fr">Français</button>
-            <button class="lang-btn" data-lang="es">Español</button>
-            <button class="lang-btn" data-lang="ht">Kreyòl</button>
-            <span class="lang-status" id="langStatus"></span>
-          </div>
-          <div class="modal-body${a.format === 'html' ? ' modal-body-html' : ''}">${a.format === 'html' ? sanitizeRichHtml(a.body) : escapeHtml(a.body)}</div>
-          <div class="modal-actions">
-            <button id="copyLinkBtn">Copy Link</button>
-            <button id="editBtn">Edit</button>
-            <button class="danger" id="deleteBtn">Delete</button>
-          </div>
+      <article class="article-page">
+        <button class="article-back" id="readerClose">← All headlines</button>
+        ${a.imageUrl ? `<img class="article-page__hero" src="${escapeAttr(a.imageUrl)}" alt="">` : ''}
+        <span class="eyebrow">${escapeHtml(a.category)} ${developingBadge(a)}</span>
+        <h1>${escapeHtml(a.title)}</h1>
+        <div class="article-page__dek">${a.format === 'html' ? sanitizeRichHtml(a.dek) : escapeHtml(a.dek)}</div>
+        <div class="byline article-page__byline">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
+        <div class="article-share" aria-label="Share this article">
+          <span>Share:</span>
+          <a class="share-button share-button--whatsapp" href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener">WhatsApp</a>
+          <a class="share-button share-button--facebook" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener">Facebook</a>
+          <button class="share-button" id="copyLinkBtn">Copy link</button>
         </div>
-      </div>
+        <div class="lang-row" id="langRow">
+          <span class="lang-label">Read in:</span>
+          <button class="lang-btn active" data-lang="original">Original</button>
+          <button class="lang-btn" data-lang="en">English</button>
+          <button class="lang-btn" data-lang="fr">Français</button>
+          <button class="lang-btn" data-lang="es">Español</button>
+          <button class="lang-btn" data-lang="ht">Kreyòl</button>
+          <span class="lang-status" id="langStatus"></span>
+        </div>
+        <div class="article-page__body${a.format === 'html' ? ' modal-body-html' : ''}">${a.format === 'html' ? sanitizeRichHtml(a.body) : escapeHtml(a.body)}</div>
+        <div class="article-page__actions">
+          <button id="editBtn">Edit</button>
+          <button class="danger" id="deleteBtn">Delete</button>
+        </div>
+      </article>
     `;
-    document.getElementById('readerOverlay').addEventListener('click', (e)=>{
-      if(e.target.id === 'readerOverlay') closeReader();
-    });
     document.getElementById('readerClose').addEventListener('click', closeReader);
     document.getElementById('copyLinkBtn').addEventListener('click', async ()=>{
-      const shareUrl = articleUrl(a);
       try{
         await navigator.clipboard.writeText(shareUrl);
-        toast('Link copied — ready for Facebook/X.');
+        toast('Link copied.');
       }catch(e){
         toast(shareUrl);
       }
@@ -1243,17 +1252,17 @@ async function compressImageForUpload(file){
       }
     }));
 
-    document.querySelectorAll('#langRow .lang-btn').forEach(btn=>{
+    root.querySelectorAll('#langRow .lang-btn').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
         if(btn.classList.contains('active')) return;
         const lang = btn.getAttribute('data-lang');
-        const titleEl = document.querySelector('#readerOverlay h1');
-        const dekEl = document.querySelector('#readerOverlay .modal-dek');
-        const bodyEl = document.querySelector('#readerOverlay .modal-body');
-        const statusEl = document.getElementById('langStatus');
+        const titleEl = root.querySelector('h1');
+        const dekEl = root.querySelector('.article-page__dek');
+        const bodyEl = root.querySelector('.article-page__body');
+        const statusEl = root.querySelector('#langStatus');
 
         if(lang === 'original'){
-          document.querySelectorAll('#langRow .lang-btn').forEach(b=>b.classList.remove('active'));
+          root.querySelectorAll('#langRow .lang-btn').forEach(b=>b.classList.remove('active'));
           btn.classList.add('active');
           titleEl.textContent = a.title;
           dekEl.innerHTML = a.format === 'html' ? sanitizeRichHtml(a.dek) : escapeHtml(a.dek);
@@ -1263,22 +1272,17 @@ async function compressImageForUpload(file){
           return;
         }
 
-        document.querySelectorAll('#langRow .lang-btn').forEach(b=>{ b.disabled = true; });
+        root.querySelectorAll('#langRow .lang-btn').forEach(b=>{ b.disabled = true; });
         statusEl.style.display = 'inline';
         statusEl.textContent = 'Translating…';
 
         try{
-          const titlePlain = a.title;
-          const dekPlain = a.format === 'html' ? stripHtml(a.dek) : a.dek;
-          const bodyPlain = a.format === 'html' ? stripHtml(a.body) : a.body;
-
           const [tTitle, tDek, tBody] = await Promise.all([
-            translateText(titlePlain, lang),
-            translateText(dekPlain, lang),
-            translateText(bodyPlain, lang)
+            translateText(a.title, lang),
+            translateText(a.format === 'html' ? stripHtml(a.dek) : a.dek, lang),
+            translateText(a.format === 'html' ? stripHtml(a.body) : a.body, lang)
           ]);
-
-          document.querySelectorAll('#langRow .lang-btn').forEach(b=>b.classList.remove('active'));
+          root.querySelectorAll('#langRow .lang-btn').forEach(b=>b.classList.remove('active'));
           btn.classList.add('active');
           titleEl.textContent = tTitle;
           dekEl.textContent = tDek;
@@ -1288,16 +1292,24 @@ async function compressImageForUpload(file){
         }catch(e){
           statusEl.textContent = 'Translation failed — try again.';
         } finally {
-          document.querySelectorAll('#langRow .lang-btn').forEach(b=>{ b.disabled = false; });
+          root.querySelectorAll('#langRow .lang-btn').forEach(b=>{ b.disabled = false; });
         }
       });
     });
+    window.scrollTo({top:0, behavior:'instant'});
+  }
+
+  function showHomePage(){
+    updateSocialMetadata(null);
+    document.getElementById('articlePageRoot').innerHTML = '';
+    document.getElementById('articlePageRoot').hidden = true;
+    document.getElementById('homePageMain').hidden = false;
   }
 
   function closeReader(){
     history.pushState({}, '', '/');
-    updateSocialMetadata(null);
-    closeModal();
+    showHomePage();
+    window.scrollTo({top:0, behavior:'instant'});
   }
 
   function closeModal(){
@@ -1345,7 +1357,7 @@ async function compressImageForUpload(file){
     if(article){
       openReader(article.id, {skipPush:true});
     } else {
-      updateSocialMetadata(null);
+      showHomePage();
       closeModal();
     }
   });
@@ -1447,6 +1459,10 @@ async function compressImageForUpload(file){
               ${CATS.map(c=>`<option value="${c}" ${a.category===c?'selected':''}>${c}</option>`).join('')}
             </select>
           </div>
+          <label class="editor-check">
+            <input id="fDeveloping" type="checkbox" ${a.isDeveloping ? 'checked' : ''}>
+            Mark as DEVELOPING
+          </label>
           <div class="editor-field">
             <label for="fAuthor">Byline (your name)</label>
             <input id="fAuthor" type="text" value="${escapeAttr(a.author)}" placeholder="e.g. Jordan Reyes">
@@ -1532,6 +1548,7 @@ async function compressImageForUpload(file){
     document.getElementById('saveArticleBtn').addEventListener('click', async ()=>{
       const title = document.getElementById('fTitle').value.trim();
       const category = document.getElementById('fCategory').value;
+      const isDeveloping = document.getElementById('fDeveloping').checked;
       const author = document.getElementById('fAuthor').value.trim() || 'Staff Writer';
       const dek = sanitizeRichHtml(document.getElementById('fDek').innerHTML.trim());
       const body = sanitizeRichHtml(document.getElementById('fBody').innerHTML.trim());
@@ -1547,6 +1564,7 @@ async function compressImageForUpload(file){
         title,
         slug: createUniqueSlug(title, isEdit ? a.id : null),
         category,
+        isDeveloping,
         author,
         dek: dek || plainToEditableHtml(excerpt(bodyPlain, 140)),
         body,
