@@ -696,6 +696,7 @@ async function compressImageForUpload(file){
   const homeTranslations = new Map();
   let isUnlocked = false;
   let currentUserEmail = "";
+  let unsubscribeComments = null;
 
   // ---------- clock / dateline ----------
   function updateClock(){
@@ -765,6 +766,94 @@ async function compressImageForUpload(file){
 
   function fmtDate(iso){
     return new Date(iso).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'});
+  }
+
+  function articleTimestamp(article){
+    if(article?.date?.toDate) return article.date.toDate().getTime();
+    const value = new Date(article?.date || 0).getTime();
+    return Number.isNaN(value) ? 0 : value;
+  }
+
+  function readingTime(article){
+    const words = stripHtml(article.body || '').split(/\s+/).filter(Boolean).length;
+    return `${Math.max(1, Math.ceil(words / 200))} min read`;
+  }
+
+  function recommendedArticles(currentArticle){
+    const others = articles.filter(article=>article.id !== currentArticle.id);
+    const hasViewMetrics = others.some(article=>Number(article.viewCount || 0) > 0);
+    if(hasViewMetrics){
+      return others
+        .sort((a,b)=>Number(b.viewCount || 0) - Number(a.viewCount || 0) || articleTimestamp(b) - articleTimestamp(a))
+        .slice(0, 3);
+    }
+    return others
+      .sort((a,b)=>Number(!!b.isDeveloping) - Number(!!a.isDeveloping) || articleTimestamp(b) - articleTimestamp(a))
+      .slice(0, 3);
+  }
+
+  function renderRecommendations(currentArticle, root){
+    const target = root.querySelector('#recommendedStories');
+    const picks = recommendedArticles(currentArticle);
+    if(!picks.length){
+      target.innerHTML = '<p class="recommendations-empty">More stories are coming soon.</p>';
+      return;
+    }
+    target.innerHTML = picks.map(article=>`
+      <a class="recommended-card" href="${escapeAttr(articlePath(article))}">
+        ${article.imageUrl ? `<img src="${escapeAttr(article.imageUrl)}" alt="">` : '<div class="recommended-card__image"></div>'}
+        <div class="recommended-card__content">
+          <span class="recommended-card__category">${escapeHtml(article.category)} ${developingBadge(article)}</span>
+          <h3>${escapeHtml(article.title)}</h3>
+          <span class="recommended-card__time">${readingTime(article)}</span>
+        </div>
+      </a>
+    `).join('');
+  }
+
+  function formatCommentDate(value){
+    if(value?.toDate) return value.toDate().toLocaleDateString([], {month:'short', day:'numeric'});
+    const date = new Date(value || '');
+    return Number.isNaN(date.getTime()) ? 'Just now' : date.toLocaleDateString([], {month:'short', day:'numeric'});
+  }
+
+  function subscribeComments(article, root){
+    if(unsubscribeComments) unsubscribeComments();
+    const list = root.querySelector('#commentList');
+    const commentsRef = collection(db, 'articles', article.id, 'comments');
+    unsubscribeComments = onSnapshot(query(commentsRef, orderBy('createdAt', 'asc')), snapshot=>{
+      list.innerHTML = snapshot.docs.map(comment=>{
+        const data = comment.data();
+        return `<article class="comment"><div class="comment__meta"><b>${escapeHtml(data.name || 'Anonymous')}</b> · ${formatCommentDate(data.createdAt)}</div><p>${escapeHtml(data.body || '')}</p></article>`;
+      }).join('') || '<p class="comments-empty">Be the first to comment.</p>';
+    }, error=>{
+      console.error('Could not load article comments.', error);
+      list.innerHTML = '<p class="comments-empty">Comments are unavailable right now.</p>';
+    });
+
+    root.querySelector('#commentForm').addEventListener('submit', async event=>{
+      event.preventDefault();
+      const name = root.querySelector('#commentName').value.trim() || 'Anonymous';
+      const body = root.querySelector('#commentBody').value.trim();
+      const button = root.querySelector('#commentSubmit');
+      if(!body){
+        toast('Write a comment before posting.');
+        return;
+      }
+      button.disabled = true;
+      button.textContent = 'Posting…';
+      try{
+        await addDoc(commentsRef, {name, body, createdAt: serverTimestamp()});
+        root.querySelector('#commentBody').value = '';
+        toast('Comment posted.');
+      }catch(error){
+        console.error('Could not save article comment.', error);
+        toast('Could not post your comment. Please try again.');
+      }finally{
+        button.disabled = false;
+        button.textContent = 'Post comment';
+      }
+    });
   }
 
   // ---------- firestore ----------
@@ -1210,12 +1299,6 @@ async function compressImageForUpload(file){
         <h1>${escapeHtml(a.title)}</h1>
         <div class="article-page__dek">${a.format === 'html' ? sanitizeRichHtml(a.dek) : escapeHtml(a.dek)}</div>
         <div class="byline article-page__byline">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
-        <div class="article-share" aria-label="Share this article">
-          <span>Share:</span>
-          <a class="share-button share-button--whatsapp" href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener">WhatsApp</a>
-          <a class="share-button share-button--facebook" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener">Facebook</a>
-          <button class="share-button" id="copyLinkBtn">Copy link</button>
-        </div>
         <div class="lang-row" id="langRow">
           <span class="lang-label">Read in:</span>
           <button class="lang-btn active" data-lang="original">Original</button>
@@ -1226,10 +1309,26 @@ async function compressImageForUpload(file){
           <span class="lang-status" id="langStatus"></span>
         </div>
         <div class="article-page__body${a.format === 'html' ? ' modal-body-html' : ''}">${a.format === 'html' ? sanitizeRichHtml(a.body) : escapeHtml(a.body)}</div>
-        <div class="article-page__actions">
-          <button id="editBtn">Edit</button>
-          <button class="danger" id="deleteBtn">Delete</button>
+        <div class="article-share article-share--end" aria-label="Share this article">
+          <span>Share this story:</span>
+          <a class="share-button share-button--whatsapp" href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener">WhatsApp</a>
+          <a class="share-button share-button--facebook" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener">Facebook</a>
+          <button class="share-button" id="copyLinkBtn">Copy link</button>
         </div>
+        <section class="article-recommendations" aria-labelledby="recommendedTitle">
+          <h2 id="recommendedTitle">🔥 Recommended Stories</h2>
+          <div id="recommendedStories" class="recommended-grid"></div>
+        </section>
+        <section id="article-comments" class="article-comments" aria-labelledby="commentsTitle">
+          <h2 id="commentsTitle">Comments</h2>
+          <form id="commentForm" class="comment-form">
+            <input id="commentName" type="text" maxlength="60" placeholder="Your name (optional)">
+            <textarea id="commentBody" maxlength="1000" placeholder="Join the discussion…" required></textarea>
+            <button id="commentSubmit" type="submit">Post comment</button>
+          </form>
+          <div id="commentList" class="comment-list"><p class="comments-empty">Loading comments…</p></div>
+        </section>
+        ${isUnlocked ? `<div class="article-page__actions"><button id="editBtn">Edit</button><button class="danger" id="deleteBtn">Delete</button></div>` : ''}
       </article>
     `;
     document.getElementById('readerClose').addEventListener('click', closeReader);
@@ -1241,16 +1340,20 @@ async function compressImageForUpload(file){
         toast(shareUrl);
       }
     });
-    document.getElementById('editBtn').addEventListener('click', ()=> requireUnlock(()=> openEditor(a)));
-    document.getElementById('deleteBtn').addEventListener('click', ()=> requireUnlock(async ()=>{
-      if(confirm('Delete "'+a.title+'"? This cannot be undone.')){
-        const ok = await removeArticle(id);
-        if(ok){
-          closeReader();
-          toast('Article deleted.');
+    if(isUnlocked){
+      document.getElementById('editBtn').addEventListener('click', ()=> openEditor(a));
+      document.getElementById('deleteBtn').addEventListener('click', async ()=>{
+        if(confirm('Delete "'+a.title+'"? This cannot be undone.')){
+          const ok = await removeArticle(id);
+          if(ok){
+            closeReader();
+            toast('Article deleted.');
+          }
         }
-      }
-    }));
+      });
+    }
+    renderRecommendations(a, root);
+    subscribeComments(a, root);
 
     root.querySelectorAll('#langRow .lang-btn').forEach(btn=>{
       btn.addEventListener('click', async ()=>{
@@ -1300,6 +1403,10 @@ async function compressImageForUpload(file){
   }
 
   function showHomePage(){
+    if(unsubscribeComments){
+      unsubscribeComments();
+      unsubscribeComments = null;
+    }
     updateSocialMetadata(null);
     document.getElementById('articlePageRoot').innerHTML = '';
     document.getElementById('articlePageRoot').hidden = true;
@@ -1798,6 +1905,8 @@ async function compressImageForUpload(file){
     isUnlocked = !!user;
     currentUserEmail = user ? user.email : "";
     updateUnlockIndicator();
+    const routeArticle = findArticleForCurrentRoute();
+    if(routeArticle) openReader(routeArticle.id, {skipPush:true});
     if(!user && new URLSearchParams(window.location.search).get('editor') === 'login'){
       const url = new URL(window.location.href);
       url.searchParams.delete('editor');
