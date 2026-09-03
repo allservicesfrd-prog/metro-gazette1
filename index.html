@@ -799,16 +799,9 @@ async function compressImageForUpload(file){
       target.innerHTML = '<p class="recommendations-empty">More stories are coming soon.</p>';
       return;
     }
-    target.innerHTML = picks.map(article=>`
-      <a class="recommended-card" href="${escapeAttr(articlePath(article))}">
-        ${article.imageUrl ? `<img src="${escapeAttr(article.imageUrl)}" alt="">` : '<div class="recommended-card__image"></div>'}
-        <div class="recommended-card__content">
-          <span class="recommended-card__category">${escapeHtml(article.category)} ${developingBadge(article)}</span>
-          <h3>${escapeHtml(article.title)}</h3>
-          <span class="recommended-card__time">${readingTime(article)}</span>
-        </div>
-      </a>
-    `).join('');
+    target.innerHTML = `<ul class="recommended-list">${picks.map(article=>`
+      <li><a href="${escapeAttr(articlePath(article))}"><span aria-hidden="true">→</span><strong>${escapeHtml(article.title)}</strong></a></li>
+    `).join('')}</ul>`;
   }
 
   function formatCommentDate(value){
@@ -1054,7 +1047,7 @@ async function compressImageForUpload(file){
     return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  const RT_ALLOWED_TAGS = new Set(['B','STRONG','I','EM','U','UL','OL','LI','BR','P','DIV']);
+  const RT_ALLOWED_TAGS = new Set(['B','STRONG','I','EM','U','H2','UL','OL','LI','BR','P','DIV']);
 
   function sanitizeRichHtml(html){
     const doc = new DOMParser().parseFromString(html || '', 'text/html');
@@ -1086,6 +1079,27 @@ async function compressImageForUpload(file){
 
   function plainToEditableHtml(text){
     return escapeHtml(text || '').replace(/\n/g, '<br>');
+  }
+
+  function translatedTextToHtml(text){
+    const source = String(text || '').trim();
+    if(!source) return '';
+    if(/<\/?(?:h2|ul|ol|li|p)\b/i.test(source)) return sanitizeRichHtml(source);
+    return source
+      .split(/(?:\r?\n){2,}/)
+      .map(block=>block.trim())
+      .filter(Boolean)
+      .map(block=>`<p>${escapeHtml(block).replace(/\r?\n/g, '<br>')}</p>`)
+      .join('');
+  }
+
+  function recommendedHeading(language){
+    return ({en:'READ ALSO', es:'LEER TAMBIÉN', ht:'LI TOU', fr:'LIRE AUSSI', original:'LIRE AUSSI'})[language] || 'LIRE AUSSI';
+  }
+
+  function updateRecommendedHeading(language, root){
+    const heading = root.querySelector('#recommendedTitle');
+    if(heading) heading.textContent = recommendedHeading(language);
   }
 
   // ---------- translation ----------
@@ -1316,7 +1330,7 @@ async function compressImageForUpload(file){
           <button class="share-button" id="copyLinkBtn">Copy link</button>
         </div>
         <section class="article-recommendations" aria-labelledby="recommendedTitle">
-          <h2 id="recommendedTitle">🔥 Recommended Stories</h2>
+          <h2 id="recommendedTitle">LIRE AUSSI</h2>
           <div id="recommendedStories" class="recommended-grid"></div>
         </section>
         <section id="article-comments" class="article-comments" aria-labelledby="commentsTitle">
@@ -1371,6 +1385,7 @@ async function compressImageForUpload(file){
           dekEl.innerHTML = a.format === 'html' ? sanitizeRichHtml(a.dek) : escapeHtml(a.dek);
           bodyEl.classList.toggle('modal-body-html', a.format === 'html');
           bodyEl.innerHTML = a.format === 'html' ? sanitizeRichHtml(a.body) : escapeHtml(a.body);
+          updateRecommendedHeading('original', root);
           statusEl.style.display = 'none';
           return;
         }
@@ -1389,8 +1404,9 @@ async function compressImageForUpload(file){
           btn.classList.add('active');
           titleEl.textContent = tTitle;
           dekEl.textContent = tDek;
-          bodyEl.classList.remove('modal-body-html');
-          bodyEl.textContent = tBody;
+          bodyEl.classList.add('modal-body-html');
+          bodyEl.innerHTML = translatedTextToHtml(tBody);
+          updateRecommendedHeading(lang, root);
           statusEl.style.display = 'none';
         }catch(e){
           statusEl.textContent = 'Translation failed — try again.';
