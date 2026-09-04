@@ -803,1227 +803,293 @@ async function compressImageForUpload(file){
         .sort((a,b)=>Number(b.viewCount || 0) - Number(a.viewCount || 0) || articleTimestamp(b) - articleTimestamp(a))
         .slice(0, 3);
     }
-    return others
-      .sort((a,b)=>Number(!!b.isDeveloping) - Number(!!a.isDeveloping) || articleTimestamp(b) - articleTimestamp(a))
-      .slice(0, 3);
+    return others.slice(0, 3);
   }
 
-  function renderRecommendations(currentArticle, root){
-    const target = root.querySelector('#recommendedStories');
-    const picks = recommendedArticles(currentArticle);
-    if(!picks.length){
-      target.innerHTML = '<p class="recommendations-empty">More stories are coming soon.</p>';
-      return;
-    }
-    target.innerHTML = `<ul class="recommended-list">${picks.map(article=>`
-      <li><a href="${escapeAttr(articlePath(article))}"><span aria-hidden="true">→</span><strong>${escapeHtml(article.title)}</strong></a></li>
-    `).join('')}</ul>`;
+  function stripHtml(htmlStr){
+    const tmp = document.createElement('div');
+    tmp.innerHTML = htmlStr || '';
+    return tmp.textContent || tmp.innerText || '';
   }
 
-  function formatCommentDate(value){
-    if(value?.toDate) return value.toDate().toLocaleDateString([], {month:'short', day:'numeric'});
-    const date = new Date(value || '');
-    return Number.isNaN(date.getTime()) ? 'Just now' : date.toLocaleDateString([], {month:'short', day:'numeric'});
-  }
-
-  async function ensureCommentIdentity(){
-    if(auth.currentUser) return auth.currentUser;
-    try{
-      const credential = await signInAnonymously(auth);
-      return credential.user;
-    }catch(error){
-      console.error('Anonymous Firebase sign-in for comments failed.', error);
-      throw new Error('Comment sign-in is unavailable.');
-    }
-  }
-
-  function subscribeComments(article, root){
-    if(unsubscribeComments) unsubscribeComments();
-    const list = root.querySelector('#commentList');
-    const commentsRef = collection(db, 'articles', article.id, 'comments');
-    unsubscribeComments = onSnapshot(query(commentsRef, orderBy('createdAt', 'asc')), snapshot=>{
-      list.innerHTML = snapshot.docs.map(comment=>{
-        const data = comment.data();
-        return `<article class="comment"><div class="comment__meta"><b>${escapeHtml(data.name || 'Anonymous')}</b> · ${formatCommentDate(data.createdAt)}</div><p>${escapeHtml(data.body || '')}</p></article>`;
-      }).join('') || '<p class="comments-empty">Be the first to comment.</p>';
-    }, error=>{
-      console.error('Could not load article comments.', error);
-      list.innerHTML = '<p class="comments-empty">Discussion is loading. If it does not appear, please try again shortly.</p>';
-    });
-
-    root.querySelector('#commentForm').addEventListener('submit', async event=>{
-      event.preventDefault();
-      const name = root.querySelector('#commentName').value.trim() || 'Anonymous';
-      const body = root.querySelector('#commentBody').value.trim();
-      const button = root.querySelector('#commentSubmit');
-      if(!body){
-        toast('Write a comment before posting.');
-        return;
-      }
-      button.disabled = true;
-      button.textContent = 'Posting…';
-      try{
-        const user = await ensureCommentIdentity();
-        await addDoc(commentsRef, {name, body, createdAt: serverTimestamp(), authorId: user.uid});
-        root.querySelector('#commentBody').value = '';
-        const confirmation = root.querySelector('#commentConfirmation');
-        confirmation.textContent = 'Comment posted successfully!';
-        confirmation.hidden = false;
-        toast('Comment posted successfully!');
-      }catch(error){
-        console.error('Could not save article comment.', error);
-        const confirmation = root.querySelector('#commentConfirmation');
-        confirmation.textContent = 'Your comment could not be posted. Please try again.';
-        confirmation.hidden = false;
-      }finally{
-        button.disabled = false;
-        button.textContent = 'Post comment';
-      }
-    });
-  }
-
-  // ---------- firestore ----------
-  let initialArticleChecked = false;
-  function subscribeArticles(){
-    const q = query(articlesRef, orderBy("createdAt", "desc"));
-    onSnapshot(q, (snapshot)=>{
-      articles = snapshot.docs.map(d=> ({ id: d.id, ...d.data() }));
-      document.getElementById('loadingRow').style.display = 'none';
-      document.getElementById('layoutRoot').style.display = 'grid';
-      render();
-      if(!initialArticleChecked){
-        initialArticleChecked = true;
-        const article = findArticleForCurrentRoute();
-        if(article){
-          openReader(article.id, {skipPush:true});
-        }
-      }
-    }, (err)=>{
-      document.getElementById('loadingRow').textContent = 'Could not load articles. Check your connection and try again.';
-    });
-  }
-
-  async function createArticle(record){
-    try{
-      await addDoc(articlesRef, record);
-      return true;
-    }catch(e){
-      toast('Could not publish — please try again.');
-      return false;
-    }
-  }
-
-  async function updateArticle(id, record){
-    try{
-      await updateDoc(doc(db, "articles", id), record);
-      return true;
-    }catch(e){
-      toast('Could not save changes — please try again.');
-      return false;
-    }
-  }
-
-  async function removeArticle(id){
-    try{
-      await deleteDoc(doc(db, "articles", id));
-      return true;
-    }catch(e){
-      toast('Could not delete — please try again.');
-      return false;
-    }
-  }
-
-  // ---------- business spotlight firestore ----------
-  function subscribeSpotlights(){
-    const q = query(spotlightsRef, orderBy("date", "desc"));
-    onSnapshot(q, (snapshot)=>{
-      spotlights = snapshot.docs.map(d=> ({ id: d.id, ...d.data() }));
-      renderSpotlights();
-    }, (err)=>{
-      // fail quietly — spotlight box just stays empty
-    });
-  }
-
-  async function createSpotlight(record){
-    const user = auth.currentUser;
-    if(!user){
-      console.error('Could not create business spotlight: no authenticated Firebase user.', {
-        collection: SPOTLIGHT_COLLECTION
-      });
-      toast('Please log in before publishing.');
-      return false;
-    }
-    try{
-      // The Firebase SDK attaches this signed-in user's token to addDoc().
-      // Refresh it first so a just-restored editor session has a valid token.
-      await user.getIdToken();
-      await addDoc(spotlightsRef, record);
-      return true;
-    }catch(e){
-      console.error('Could not create business spotlight in Firestore.', {
-        error:e,
-        code:e?.code,
-        message:e?.message,
-        collection:SPOTLIGHT_COLLECTION,
-        userId:user.uid,
-        record
-      });
-      toast('Could not publish — please try again.');
-      return false;
-    }
-  }
-
-  async function updateSpotlight(id, record){
-    try{
-      await updateDoc(doc(db, "spotlights", id), record);
-      return true;
-    }catch(e){
-      console.error('Could not update business spotlight in Firestore.', {error:e, id, record});
-      toast('Could not save changes — please try again.');
-      return false;
-    }
-  }
-
-  async function removeSpotlight(id){
-    try{
-      await deleteDoc(doc(db, "spotlights", id));
-      return true;
-    }catch(e){
-      toast('Could not delete — please try again.');
-      return false;
-    }
-  }
-
-  // ---------- empty-state copy shown when no articles exist yet ----------
-  const WELCOME_HINT = "No stories published yet. Log in and click \"Write Article\" to publish the first one.";
-
-  // ---------- rendering ----------
-  function render(){
-    const articleCount = document.getElementById('articleCount');
-    if(articleCount) articleCount.textContent = articles.length;
-
-    const filtered = activeCat === "All" ? articles : articles.filter(a=>
-      activeCat === 'Sport' ? (a.category === 'Sport' || a.category === 'Sports') : a.category === activeCat
-    );
-
-    const leadSlot = document.getElementById('leadSlot');
-    const gridSlot = document.getElementById('gridSlot');
-    const sidebarList = document.getElementById('sidebarList');
-
-    if(!filtered.length){
-      leadSlot.innerHTML = `<div class="empty-state">
-        <h2>No stories yet in ${activeCat==='All'?'the Gazette':activeCat}</h2>
-        <p>${WELCOME_HINT}</p>
-      </div>`;
-      gridSlot.innerHTML = '';
-    } else {
-      const [lead, ...rest] = filtered;
-      leadSlot.innerHTML = renderLead(lead);
-      gridSlot.innerHTML = rest.map(renderCard).join('');
-    }
-
-    sidebarList.innerHTML = articles.slice(0,6).map((a,i)=>`
-      <div class="sidebar-item" data-id="${a.id}">
-        <span class="idx">${String(i+1).padStart(2,'0')}</span>${escapeHtml(homeArticleText(a).title)}
-      </div>
-    `).join('') || '<div class="sidebar-item" style="cursor:default;">Nothing published yet.</div>';
-
-    renderPhotos();
-    renderVerticalPhotoGallery();
-
-    document.querySelectorAll('[data-open-id]').forEach(el=>{
-      el.addEventListener('click', ()=> openReader(el.getAttribute('data-open-id')));
-    });
-    document.querySelectorAll('.sidebar-item[data-id]').forEach(el=>{
-      el.addEventListener('click', ()=> openReader(el.getAttribute('data-id')));
-    });
-  }
-
-  function renderPhotos(){
-    const grid = document.getElementById('photos-grid');
-    if(!grid) return;
-    const photoArticles = articles.filter(article=>article.imageUrl).slice(0, 4);
-    grid.innerHTML = photoArticles.map(article=>`
-      <a class="photo-card" href="${escapeAttr(articlePath(article))}">
-        <img src="${escapeAttr(article.imageUrl)}" alt="${escapeAttr(article.title)}" loading="lazy">
-        <span class="photo-card__overlay"></span>
-        <span class="photo-card__title">${escapeHtml(article.title)}</span>
-      </a>
-    `).join('') || '<p class="photos-empty">Photo stories will appear here.</p>';
-  }
-
-  function renderVerticalPhotoGallery(){
-    const container = document.getElementById('vertical-photo-list');
-    if(!container) return;
-    const photoArticles = articles.filter(article=>article.imageUrl).slice(0, 5);
-    container.innerHTML = photoArticles.map(article=>`
-      <a class="vertical-photo-card" href="${escapeAttr(articlePath(article))}">
-        <span class="thumb-wrapper"><img src="${escapeAttr(article.imageUrl)}" alt="${escapeAttr(article.title)}" loading="lazy"></span>
-        <span class="card-caption">${escapeHtml(article.title)}</span>
-      </a>
-    `).join('') || '<p class="photos-empty">Photo stories will appear here.</p>';
+  function sanitizeBodyHtml(htmlStr){
+    return htmlStr || '';
   }
 
   function renderSpotlights(){
     const list = document.getElementById('spotlightList');
     if(!list) return;
-    if(!spotlights.length){
-      list.innerHTML = '<div class="spotlight-item spotlight-empty">No businesses featured yet.</div>';
+    if(!spotlights || spotlights.length === 0){
+      list.innerHTML = `<div class="spotlight-empty">No business spotlights available.</div>`;
       return;
     }
-    list.innerHTML = spotlights.map(s=>{
-      const mediaUrl = s.mediaUrl || s.imageUrl || '';
-      const isVideo = s.mediaType === 'video';
-      const mediaHtml = isVideo
-        ? (mediaUrl ? `<video class="spotlight-media" src="${escapeAttr(mediaUrl)}" muted loop playsinline autoplay></video>` : `<div class="spotlight-media spotlight-media--empty"></div>`)
-        : (mediaUrl ? `<img class="spotlight-media" src="${escapeAttr(mediaUrl)}" alt="${escapeAttr(s.name || 'Featured business')}">` : `<div class="spotlight-media spotlight-media--empty"></div>`);
-      const category = s.category || 'Local Business';
-      return `
-      <article class="spotlight-card" data-visit="${s.id}">
-        ${mediaHtml}
-        <div class="spotlight-card__content">
-          <span class="spotlight-category">${escapeHtml(category)}</span>
-          <h4 class="spotlight-name">${escapeHtml(s.name || 'Featured business')}</h4>
-          ${s.blurb ? `<p class="spotlight-blurb">${escapeHtml(s.blurb)}</p>` : ''}
-          ${s.link ? `<a class="spotlight-cta" href="${escapeAttr(s.link)}" target="_blank" rel="noopener">Visit Website</a>` : ''}
-          ${isUnlocked ? `<button class="spotlight-edit" data-edit="${s.id}" title="Edit this spotlight">Edit</button>` : ''}
+    list.innerHTML = spotlights.map(item => `
+      <div class="spotlight-item" data-id="${item.id}">
+        ${item.imageUrl ? `<img src="${item.imageUrl}" class="spotlight-thumb" alt="${item.name}">` : `<div class="spotlight-thumb"></div>`}
+        <div class="spotlight-info">
+          <div class="spotlight-name">${item.name}</div>
+          <div class="spotlight-blurb">${item.blurb || ''}</div>
         </div>
-      </article>
-    `;}).join('');
-
-    list.querySelectorAll('[data-visit]').forEach(el=>{
-      el.addEventListener('click', (e)=>{
-        if(e.target.closest('[data-edit], a')) return;
-        const s = spotlights.find(x=>x.id===el.getAttribute('data-visit'));
-        if(s && s.link) window.open(s.link, '_blank', 'noopener');
-      });
-    });
-    list.querySelectorAll('[data-edit]').forEach(el=>{
-      el.addEventListener('click', (e)=>{
-        e.stopPropagation();
-        const s = spotlights.find(x=>x.id===el.getAttribute('data-edit'));
-        if(s) requireUnlock(()=> openSpotlightEditor(s));
-      });
-    });
-  }
-
-  function escapeHtml(s){
-    return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-
-  const RT_ALLOWED_TAGS = new Set(['B','STRONG','I','EM','U','H2','UL','OL','LI','BR','P','DIV']);
-
-  function sanitizeRichHtml(html){
-    const doc = new DOMParser().parseFromString(html || '', 'text/html');
-    function clean(node){
-      const children = [...node.childNodes];
-      for(const child of children){
-        if(child.nodeType === 1){
-          clean(child); // sanitize descendants FIRST, before deciding to unwrap this node
-          if(!RT_ALLOWED_TAGS.has(child.tagName)){
-            while(child.firstChild) node.insertBefore(child.firstChild, child);
-            node.removeChild(child);
-          } else {
-            [...child.attributes].forEach(attr=> child.removeAttribute(attr.name));
-          }
-        } else if(child.nodeType !== 3){
-          node.removeChild(child);
-        }
-      }
-    }
-    clean(doc.body);
-    return doc.body.innerHTML.trim();
-  }
-
-  function stripHtml(html){
-    const div = document.createElement('div');
-    div.innerHTML = html || '';
-    return (div.textContent || '').replace(/\s+/g, ' ').trim();
-  }
-
-  function plainToEditableHtml(text){
-    return escapeHtml(text || '').replace(/\n/g, '<br>');
-  }
-
-  function translatedTextToHtml(text){
-    const source = String(text || '').trim();
-    if(!source) return '';
-    if(/<\/?(?:h2|ul|ol|li|p)\b/i.test(source)) return sanitizeRichHtml(source);
-    return source
-      .split(/(?:\r?\n){2,}/)
-      .map(block=>block.trim())
-      .filter(Boolean)
-      .map(block=>`<p>${escapeHtml(block).replace(/\r?\n/g, '<br>')}</p>`)
-      .join('');
-  }
-
-  function recommendedHeading(language){
-    return ({en:'READ ALSO', es:'LEER TAMBIÉN', ht:'LI TOU', fr:'LIRE AUSSI', original:'LIRE AUSSI'})[language] || 'LIRE AUSSI';
-  }
-
-  function updateRecommendedHeading(language, root){
-    const heading = root.querySelector('#recommendedTitle');
-    if(heading) heading.textContent = recommendedHeading(language);
-  }
-
-  // ---------- translation ----------
-  const MYMEMORY_MAX_CHARS = 450;
-
-  function chunkText(text, maxLen){
-    const paragraphs = text.split(/\n{2,}/).map(p=>p.trim()).filter(Boolean);
-    const chunks = [];
-    let current = '';
-    for(const para of paragraphs){
-      if(para.length > maxLen){
-        if(current){ chunks.push(current); current = ''; }
-        const sentences = para.match(/[^.!?]+[.!?]*\s*/g) || [para];
-        let sub = '';
-        for(const sent of sentences){
-          if((sub + sent).length > maxLen){
-            if(sub) chunks.push(sub.trim());
-            sub = sent;
-          } else {
-            sub += sent;
-          }
-        }
-        if(sub) chunks.push(sub.trim());
-      } else if((current + '\n\n' + para).length > maxLen){
-        if(current) chunks.push(current);
-        current = para;
-      } else {
-        current = current ? current + '\n\n' + para : para;
-      }
-    }
-    if(current) chunks.push(current);
-    return chunks.length ? chunks : [text];
-  }
-
-  async function translateText(text, targetLang){
-    if(!text || !text.trim()) return '';
-    const chunks = chunkText(text, MYMEMORY_MAX_CHARS);
-    const results = [];
-    for(const chunk of chunks){
-      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=autodetect|${targetLang}&de=allservicesfrd@gmail.com`;
-      const res = await fetch(url);
-      const data = await res.json();
-      const translated = data?.responseData?.translatedText;
-      if(!res.ok || !translated || translated.includes('MYMEMORY WARNING')){
-        throw new Error('Translation temporarily unavailable');
-      }
-      results.push(translated);
-    }
-    return results.join('\n\n');
-  }
-
-  function wireRichTextControls(scopeEl){
-    scopeEl.querySelectorAll('.rt-toolbar').forEach(toolbar=>{
-      const editableId = toolbar.getAttribute('data-for');
-      toolbar.querySelectorAll('button[data-cmd]').forEach(btn=>{
-        btn.addEventListener('click', (e)=>{
-          e.preventDefault();
-          const editable = document.getElementById(editableId);
-          editable.focus();
-          document.execCommand(btn.getAttribute('data-cmd'), false, null);
-        });
-      });
-    });
-    scopeEl.querySelectorAll('.rt-maximize-btn').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const target = document.getElementById(btn.getAttribute('data-target'));
-        const expanded = target.classList.toggle('rt-expanded');
-        btn.textContent = expanded ? '⤡ Collapse' : '⤢ Expand';
-      });
-    });
-    scopeEl.querySelectorAll('.rt-editable').forEach(editable=>{
-      editable.addEventListener('paste', (e)=>{
-        e.preventDefault();
-        const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-        document.execCommand('insertText', false, text);
-      });
-    });
-  }
-
-  function developingBadge(article){
-    return article.isDeveloping ? '<span class="developing-badge">Developing</span>' : '';
-  }
-
-  function renderLead(a){
-    const copy = homeArticleText(a);
-    const dekHtml = homeLanguage === 'original'
-      ? (a.format === 'html' ? sanitizeRichHtml(a.dek) : escapeHtml(a.dek))
-      : escapeHtml(copy.dek);
-    return `
-      <div class="lead-story" data-open-id="${a.id}">
-        ${a.imageUrl ? `<img class="lead-image" src="${a.imageUrl}" alt="">` : ''}
-        <span class="eyebrow">${a.category} • Featured ${developingBadge(a)}</span>
-        <h1>${escapeHtml(copy.title)}</h1>
-        <p class="dek">${dekHtml}</p>
-        <div class="byline">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
+        ${isUnlocked ? `<button class="spotlight-edit" data-id="${item.id}">✏️</button>` : ''}
       </div>
-    `;
+    `).join('');
   }
 
-  function renderCard(a){
-    const copy = homeArticleText(a);
-    return `
-      <div class="article-card" data-open-id="${a.id}">
-        ${a.imageUrl ? `<img class="card-image" src="${a.imageUrl}" alt="">` : ''}
-        <span class="eyebrow">${a.category} ${developingBadge(a)}</span>
-        <h2>${escapeHtml(copy.title)}</h2>
-        <p>${escapeHtml(excerpt(copy.dek, 110))}</p>
-        <div class="byline">By ${escapeHtml(a.author)} · ${fmtDate(a.date)}</div>
-      </div>
-    `;
-  }
+  function renderApp(){
+    const layoutRoot = document.getElementById('layoutRoot');
+    const loadingRow = document.getElementById('loadingRow');
+    const leadSlot = document.getElementById('leadSlot');
+    const gridSlot = document.getElementById('gridSlot');
+    const sidebarList = document.getElementById('sidebarList');
 
-  function setMetaContent(id, value){
-    const meta = document.getElementById(id);
-    if(meta) meta.setAttribute('content', value);
-  }
+    if(loadingRow) loadingRow.style.display = 'none';
+    if(layoutRoot) layoutRoot.style.display = 'grid';
 
-  function updateSocialMetadata(article){
-    const url = article ? articleUrl(article) : `${SITE_URL}/`;
-    const title = article ? article.title : 'Metro Gazette — News That Matters';
-    const description = article
-      ? (stripHtml(article.dek) || excerpt(stripHtml(article.body), 160))
-      : 'Metro-Gazette delivers timely, accurate reporting from the Dominican Republic, the Caribbean, and around the world.';
-    const image = article?.imageUrl || DEFAULT_SOCIAL_IMAGE;
-    const imageAlt = article ? article.title : 'Metro-Gazette — News That Matters';
+    const routeArticle = findArticleForCurrentRoute();
+    if(routeArticle){
+      document.getElementById('homePageMain').hidden = true;
+      document.getElementById('articlePageRoot').hidden = false;
+      renderArticlePage(routeArticle);
+      return;
+    } else {
+      document.getElementById('homePageMain').hidden = false;
+      document.getElementById('articlePageRoot').hidden = true;
+    }
 
-    document.title = title;
-    document.getElementById('canonicalUrl').setAttribute('href', url);
-    setMetaContent('metaDescription', description);
-    setMetaContent('ogTitle', title);
-    setMetaContent('ogDescription', description);
-    setMetaContent('ogImage', image);
-    setMetaContent('ogImageAlt', imageAlt);
-    setMetaContent('ogUrl', url);
-    setMetaContent('twitterTitle', title);
-    setMetaContent('twitterDescription', description);
-    setMetaContent('twitterImage', image);
-    setMetaContent('twitterImageAlt', imageAlt);
-  }
+    const filtered = activeCat === 'All' ? articles : articles.filter(a => a.category === activeCat);
 
-  function homeArticleText(a){
-    const originalDek = a.format === 'html' ? stripHtml(a.dek) : a.dek;
-    if(homeLanguage === 'original') return {title:a.title, dek:originalDek};
-    const translated = homeTranslations.get(`${a.id}:${homeLanguage}`);
-    return translated || {title:a.title, dek:originalDek};
-  }
-
-  async function setHomeLanguage(lang, btn){
-    if(lang === homeLanguage) return;
-    const buttons = document.querySelectorAll('#homeLangRow .lang-btn');
-    const status = document.getElementById('homeLangStatus');
-
-    if(lang === 'original'){
-      homeLanguage = lang;
-      buttons.forEach(b=>b.classList.toggle('active', b===btn));
-      status.style.display = 'none';
-      render();
+    if(!filtered || filtered.length === 0){
+      if(leadSlot) leadSlot.innerHTML = `<div class="empty-state"><h2>No Articles Found</h2><p>Check back later or select another category.</p></div>`;
+      if(gridSlot) gridSlot.innerHTML = '';
+      if(sidebarList) sidebarList.innerHTML = '';
+      renderSpotlights();
       return;
     }
 
-    buttons.forEach(b=>b.disabled = true);
-    status.style.display = 'inline';
-    status.textContent = 'Translating headlines…';
-    try{
-      await Promise.all(articles.map(async a=>{
-        const key = `${a.id}:${lang}`;
-        if(homeTranslations.has(key)) return;
-        const dek = a.format === 'html' ? stripHtml(a.dek) : a.dek;
-        const [title, translatedDek] = await Promise.all([
-          translateText(a.title, lang),
-          translateText(dek, lang)
-        ]);
-        homeTranslations.set(key, {title, dek:translatedDek});
-      }));
-      homeLanguage = lang;
-      buttons.forEach(b=>b.classList.toggle('active', b===btn));
-      status.style.display = 'none';
-      render();
-    }catch(e){
-      status.textContent = 'Translation failed — try again.';
-    } finally {
-      buttons.forEach(b=>b.disabled = false);
+    const lead = filtered[0];
+    if(leadSlot){
+      leadSlot.innerHTML = `
+        <article class="lead-story" data-id="${lead.id}">
+          <span class="eyebrow">${lead.category || 'News'}</span>
+          ${lead.imageUrl ? `<img src="${lead.imageUrl}" class="lead-image" alt="${lead.title}">` : ''}
+          <h1>${lead.title}</h1>
+          <div class="dek">${lead.dek || ''}</div>
+          <div class="byline">By <b>${lead.author || 'Staff'}</b> • ${fmtDate(lead.date)}</div>
+        </article>
+      `;
     }
-  }
 
-  // ---------- standalone article route ----------
-  function openReader(id, opts){
-    const a = articles.find(x=>x.id===id);
-    if(!a) return;
-    if(!opts || !opts.skipPush){
-      history.pushState({articleId:id}, '', articlePath(a));
+    if(gridSlot){
+      const gridItems = filtered.slice(1);
+      gridSlot.innerHTML = gridItems.map(item => `
+        <article class="article-card" data-id="${item.id}">
+          <span class="eyebrow">${item.category || 'News'}</span>
+          ${item.imageUrl ? `<img src="${item.imageUrl}" class="card-image" alt="${item.title}">` : ''}
+          2>${item.title}</h2>
+          <p>${excerpt(stripHtml(item.body || ''), 110)}</p>
+          <div class="byline">${fmtDate(item.date)}</div>
+        </article>
+      `).join('');
     }
-    updateSocialMetadata(a);
-    if(typeof gtag === 'function'){
-      gtag('event', 'page_view', {
-        page_title: a.title,
-        page_location: window.location.href,
-        page_path: window.location.pathname + window.location.search
-      });
-    }
-    const root = document.getElementById('articlePageRoot');
-    document.getElementById('homePageMain').hidden = true;
-    root.hidden = false;
-    const shareUrl = articleUrl(a);
-    const shareText = `${a.title} — ${shareUrl}`;
-    root.innerHTML = `
-      <article class="article-page">
-        <button class="article-back" id="readerClose">← All headlines</button>
-        ${a.imageUrl ? `<img class="article-page__hero" src="${escapeAttr(a.imageUrl)}" alt="">` : ''}
-        <span class="eyebrow">${escapeHtml(a.category)} ${developingBadge(a)}</span>
-        <h1>${escapeHtml(a.title)}</h1>
-        <div class="article-page__dek">${a.format === 'html' ? sanitizeRichHtml(a.dek) : escapeHtml(a.dek)}</div>
-        <div class="byline article-page__byline">By <b>${escapeHtml(a.author)}</b> · ${fmtDate(a.date)}</div>
-        <div class="lang-row" id="langRow">
-          <span class="lang-label">Read in:</span>
-          <button class="lang-btn active" data-lang="original">Original</button>
-          <button class="lang-btn" data-lang="en">English</button>
-          <button class="lang-btn" data-lang="fr">Français</button>
-          <button class="lang-btn" data-lang="es">Español</button>
-          <button class="lang-btn" data-lang="ht">Kreyòl</button>
-          <span class="lang-status" id="langStatus"></span>
+
+    if(sidebarList){
+      sidebarList.innerHTML = articles.slice(0, 5).map((item, idx) => `
+        <div class="sidebar-item" data-id="${item.id}">
+          <span class="idx">${idx + 1}.</span> ${item.title}
         </div>
-        <div class="article-page__body${a.format === 'html' ? ' modal-body-html' : ''}">${a.format === 'html' ? sanitizeRichHtml(a.body) : escapeHtml(a.body)}</div>
-        <div class="article-share article-share--end" aria-label="Share this article">
-          <span>Share this story:</span>
-          <a class="share-button share-button--whatsapp" href="https://wa.me/?text=${encodeURIComponent(shareText)}" target="_blank" rel="noopener">WhatsApp</a>
-          <a class="share-button share-button--facebook" href="https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}" target="_blank" rel="noopener">Facebook</a>
-          <button class="share-button" id="copyLinkBtn">Copy link</button>
-        </div>
-        <section class="article-recommendations" aria-labelledby="recommendedTitle">
-          <h2 id="recommendedTitle">LIRE AUSSI</h2>
-          <div id="recommendedStories" class="recommended-grid"></div>
-        </section>
-        <section id="article-comments" class="article-comments" aria-labelledby="commentsTitle">
-          <h2 id="commentsTitle">Comments</h2>
-          <form id="commentForm" class="comment-form">
-            <input id="commentName" type="text" maxlength="60" placeholder="Your name (optional)">
-            <textarea id="commentBody" maxlength="1000" placeholder="Join the discussion…" required></textarea>
-            <button id="commentSubmit" type="submit">Post comment</button>
-          </form>
-          <p id="commentConfirmation" class="comment-confirmation" role="status" hidden></p>
-          <div id="commentList" class="comment-list"><p class="comments-empty">Loading comments…</p></div>
-        </section>
-        ${isUnlocked ? `<div class="article-page__actions"><button id="editBtn">Edit</button><button class="danger" id="deleteBtn">Delete</button></div>` : ''}
-      </article>
-    `;
-    document.getElementById('readerClose').addEventListener('click', closeReader);
-    document.getElementById('copyLinkBtn').addEventListener('click', async ()=>{
-      try{
-        await navigator.clipboard.writeText(shareUrl);
-        toast('Link copied.');
-      }catch(e){
-        toast(shareUrl);
-      }
-    });
-    if(isUnlocked){
-      document.getElementById('editBtn').addEventListener('click', ()=> openEditor(a));
-      document.getElementById('deleteBtn').addEventListener('click', async ()=>{
-        if(confirm('Delete "'+a.title+'"? This cannot be undone.')){
-          const ok = await removeArticle(id);
-          if(ok){
-            closeReader();
-            toast('Article deleted.');
-          }
-        }
-      });
+      `).join('');
     }
-    renderRecommendations(a, root);
-    subscribeComments(a, root);
 
-    root.querySelectorAll('#langRow .lang-btn').forEach(btn=>{
-      btn.addEventListener('click', async ()=>{
-        if(btn.classList.contains('active')) return;
-        const lang = btn.getAttribute('data-lang');
-        const titleEl = root.querySelector('h1');
-        const dekEl = root.querySelector('.article-page__dek');
-        const bodyEl = root.querySelector('.article-page__body');
-        const statusEl = root.querySelector('#langStatus');
-
-        if(lang === 'original'){
-          root.querySelectorAll('#langRow .lang-btn').forEach(b=>b.classList.remove('active'));
-          btn.classList.add('active');
-          titleEl.textContent = a.title;
-          dekEl.innerHTML = a.format === 'html' ? sanitizeRichHtml(a.dek) : escapeHtml(a.dek);
-          bodyEl.classList.toggle('modal-body-html', a.format === 'html');
-          bodyEl.innerHTML = a.format === 'html' ? sanitizeRichHtml(a.body) : escapeHtml(a.body);
-          updateRecommendedHeading('original', root);
-          statusEl.style.display = 'none';
-          return;
-        }
-
-        root.querySelectorAll('#langRow .lang-btn').forEach(b=>{ b.disabled = true; });
-        statusEl.style.display = 'inline';
-        statusEl.textContent = 'Translating…';
-
-        try{
-          const [tTitle, tDek, tBody] = await Promise.all([
-            translateText(a.title, lang),
-            translateText(a.format === 'html' ? stripHtml(a.dek) : a.dek, lang),
-            translateText(a.format === 'html' ? stripHtml(a.body) : a.body, lang)
-          ]);
-          root.querySelectorAll('#langRow .lang-btn').forEach(b=>b.classList.remove('active'));
-          btn.classList.add('active');
-          titleEl.textContent = tTitle;
-          dekEl.textContent = tDek;
-          bodyEl.classList.add('modal-body-html');
-          bodyEl.innerHTML = translatedTextToHtml(tBody);
-          updateRecommendedHeading(lang, root);
-          statusEl.style.display = 'none';
-        }catch(e){
-          statusEl.textContent = 'Translation failed — try again.';
-        } finally {
-          root.querySelectorAll('#langRow .lang-btn').forEach(b=>{ b.disabled = false; });
-        }
-      });
-    });
-    window.scrollTo({top:0, behavior:'instant'});
-  }
-
-  function showHomePage(){
-    if(unsubscribeComments){
-      unsubscribeComments();
-      unsubscribeComments = null;
-    }
-    updateSocialMetadata(null);
-    document.getElementById('articlePageRoot').innerHTML = '';
-    document.getElementById('articlePageRoot').hidden = true;
-    document.getElementById('homePageMain').hidden = false;
-  }
-
-  function closeReader(){
-    history.pushState({}, '', '/');
-    showHomePage();
-    window.scrollTo({top:0, behavior:'instant'});
-  }
-
-  function closeModal(){
-    document.getElementById('modalRoot').innerHTML = '';
-  }
-
-  function openLegalModal(kind){
-    const isTerms = kind === 'terms';
-    const title = isTerms ? 'Terms of Service' : 'Privacy Policy';
-    const content = isTerms ? `
-      <p><strong>Terms of Service — Metro-Gazette</strong></p>
-      <p>Welcome to Metro-Gazette (“we,” “our,” “us”). By accessing or using our website, you agree to the following Terms of Service. Please read them carefully.</p>
-      <h2>1. Acceptance of Terms</h2><p>By using Metro-Gazette, you agree to comply with these Terms of Service and all applicable laws. If you do not agree, please discontinue use of the website.</p>
-      <h2>2. Use of the Website</h2><p>You may use Metro-Gazette for lawful purposes only. You agree not to:</p><ul><li>Engage in activities that disrupt website functionality</li><li>Attempt unauthorized access to our systems</li><li>Use automated tools (bots, scrapers) without permission</li><li>Post or distribute harmful, illegal, or misleading content</li></ul>
-      <h2>3. Intellectual Property</h2><p>All content published on Metro-Gazette—including articles, images, graphics, logos, and layout—is owned by Metro-Gazette or used with permission.</p><p>You may not:</p><ul><li>Copy, reproduce, or republish our content without authorization</li><li>Use our branding for commercial purposes</li><li>Modify or distribute our content without written consent</li></ul>
-      <h2>4. User-Submitted Content</h2><p>If you submit comments, messages, or other content:</p><ul><li>You grant us a non-exclusive license to display and use that content</li><li>You confirm that your submission does not violate any laws or rights</li><li>We reserve the right to remove content that violates our policies</li></ul>
-      <h2>5. Third-Party Links</h2><p>Metro-Gazette may contain links to external websites. We are not responsible for:</p><ul><li>The content on those websites</li><li>Their privacy practices</li><li>Any damages resulting from visiting third-party sites</li></ul><p>You access external links at your own risk.</p>
-      <h2>6. Advertising and Sponsored Content</h2><p>Metro-Gazette may display advertisements or sponsored content from third-party partners. We do not guarantee:</p><ul><li>The accuracy of advertiser claims</li><li>The quality of advertised products or services</li></ul><p>Any interactions with advertisers are solely between you and the advertiser.</p>
-      <h2>7. Disclaimer of Warranties</h2><p>Metro-Gazette is provided “as is” and “as available.” We do not guarantee:</p><ul><li>Continuous, error-free operation</li><li>Accuracy or completeness of content</li><li>Protection from viruses or harmful components</li></ul><p>You use the website at your own risk.</p>
-      <h2>8. Limitation of Liability</h2><p>Metro-Gazette is not liable for:</p><ul><li>Any direct, indirect, incidental, or consequential damages</li><li>Loss of data, profits, or business opportunities</li><li>Issues arising from use or inability to use the website</li></ul><p>This limitation applies to all users to the fullest extent permitted by law.</p>
-      <h2>9. Changes to Terms</h2><p>We may update these Terms of Service at any time. Changes will be posted on this page with an updated “Last Updated” date. Continued use of the website means you accept the revised terms.</p>
-      <h2>10. Governing Law</h2><p>These Terms of Service are governed by the laws of the Dominican Republic. Any disputes will be handled under local jurisdiction.</p>
-      <h2>11. Contact Us</h2><p>For questions about these Terms of Service, contact us at: <a href="mailto:allservicesfrd@gmail.com">allservicesfrd@gmail.com</a></p><p>Metro-Gazette<br>Email: <a href="mailto:allservicesfrd@gmail.com">allservicesfrd@gmail.com</a></p>
-    ` : `
-      <p><strong>Privacy Policy — Metro-Gazette</strong></p>
-      <p>Metro-Gazette (“we,” “our,” “us”) is committed to protecting your privacy. This Privacy Policy explains how we collect, use, and safeguard information when you visit our website.</p><p>By accessing Metro-Gazette, you agree to the terms described in this policy.</p>
-      <h2>1. Information We Collect</h2><p><strong>a. Automatically Collected Data</strong></p><p>When you visit our website, certain information may be collected automatically, including:</p><ul><li>IP address</li><li>Browser type and version</li><li>Device information</li><li>Pages visited</li><li>Time spent on the site</li><li>Referring websites</li></ul><p>This data helps us improve website performance and user experience.</p><p><strong>b. Cookies and Tracking Technologies</strong></p><p>We use cookies and similar technologies to:</p><ul><li>Analyze website traffic</li><li>Personalize content</li><li>Display relevant advertisements</li></ul><p>You can disable cookies in your browser settings, but some features may not function properly.</p><p><strong>c. Voluntary Information</strong></p><p>If you contact us or subscribe to updates, we may collect:</p><ul><li>Name</li><li>Email address</li><li>Any information you choose to provide</li></ul>
-      <h2>2. Use of Your Information</h2><p>We use collected information to:</p><ul><li>Improve website functionality</li><li>Provide relevant news content</li><li>Analyze user behavior</li><li>Display personalized advertisements</li><li>Respond to inquiries or messages</li></ul>
-      <h2>3. Advertising and Third-Party Services</h2><p>Metro-Gazette may use third-party advertising networks such as:</p><ul><li>Google AdSense</li><li>Media.net</li><li>Ezoic</li><li>Other ad partners</li></ul><p>These partners may use cookies, web beacons, or similar technologies to:</p><ul><li>Display personalized ads</li><li>Measure ad performance</li><li>Track user interactions</li></ul><p>Third-party advertisers may collect information according to their own privacy policies.</p>
-      <h2>4. Links to External Websites</h2><p>Our website may contain links to external sites. We are not responsible for the content or privacy practices of those websites. We encourage users to review the privacy policies of any external site they visit.</p>
-      <h2>5. Data Protection</h2><p>We implement reasonable security measures to protect your information. However, no online system is completely secure, and we cannot guarantee absolute protection.</p>
-      <h2>6. Children’s Privacy</h2><p>Metro-Gazette does not knowingly collect personal information from children under 13. If we learn that such information has been collected, we will delete it promptly.</p>
-      <h2>7. Your Choices</h2><p>You may:</p><ul><li>Disable cookies through your browser</li><li>Opt out of personalized ads through Google’s Ads Settings</li><li>Contact us to request deletion of voluntarily submitted information</li></ul>
-      <h2>8. Changes to This Policy</h2><p>We may update this Privacy Policy periodically. Changes will be posted on this page with an updated “Last Updated” date.</p>
-      <h2>9. Contact Us</h2><p>If you have questions about this Privacy Policy, you may contact us at: <a href="mailto:allservicesfrd@gmail.com">allservicesfrd@gmail.com</a></p><p>Metro-Gazette<br>Email: <a href="mailto:allservicesfrd@gmail.com">allservicesfrd@gmail.com</a></p>
-    `;
-    const root = document.getElementById('modalRoot');
-    root.innerHTML = `<div class="modal-overlay" id="legalOverlay"><div class="modal legal-modal"><button class="modal-close" aria-label="Close" id="legalClose">×</button><h1>${title}</h1><div class="legal-content">${content}</div></div></div>`;
-    document.getElementById('legalClose').addEventListener('click', closeModal);
-    document.getElementById('legalOverlay').addEventListener('click', e=>{ if(e.target.id === 'legalOverlay') closeModal(); });
-  }
-
-  window.addEventListener('popstate', ()=>{
-    const article = findArticleForCurrentRoute();
-    if(article){
-      openReader(article.id, {skipPush:true});
-    } else {
-      showHomePage();
-      closeModal();
-    }
-  });
-
-  // ---------- login gate ----------
-  function requireUnlock(onSuccess){
-    if(isUnlocked){ onSuccess(); return; }
-    const root = document.getElementById('modalRoot');
-    root.innerHTML = `
-      <div class="modal-overlay" id="gateOverlay">
-        <div class="modal gate-modal">
-          <button class="modal-close" aria-label="Close" id="gateClose">×</button>
-          <div class="lock-icon"></div>
-          <h1>Editor Login</h1>
-          <p class="gate-sub">Log in to write, edit, or delete articles.</p>
-          <div class="editor-field">
-            <label for="fEmail">Email</label>
-            <input id="fEmail" type="email" placeholder="you@example.com">
-          </div>
-          <div class="editor-field">
-            <label for="fPassword">Password</label>
-            <input id="fPassword" type="password" placeholder="••••••••">
-          </div>
-          <div class="gate-error" id="gateError">Could not log in. Check your email and password.</div>
-          <div>
-            <button class="editor-save" id="gateSubmit">Log In</button>
-            <button class="editor-cancel" id="gateCancel">Cancel</button>
-          </div>
-        </div>
-      </div>
-    `;
-    const overlay = document.getElementById('gateOverlay');
-    const emailInput = document.getElementById('fEmail');
-    const passInput = document.getElementById('fPassword');
-    const err = document.getElementById('gateError');
-    emailInput.focus();
-    async function tryUnlock(){
-      const submitBtn = document.getElementById('gateSubmit');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Logging in…';
-      try{
-        const credential = await signInWithEmailAndPassword(auth, emailInput.value.trim(), passInput.value);
-        const token = await credential.user.getIdTokenResult(true);
-        if(token.claims.admin !== true){
-          await signOut(auth);
-          throw new Error('This account is not an editor admin.');
-        }
-        closeModal();
-        toast('Logged in.');
-        onSuccess();
-      }catch(e){
-        err.style.display = 'block';
-        passInput.value = '';
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Log In';
-      }
-    }
-    overlay.addEventListener('click', (e)=>{ if(e.target.id==='gateOverlay') closeModal(); });
-    document.getElementById('gateClose').addEventListener('click', closeModal);
-    document.getElementById('gateCancel').addEventListener('click', closeModal);
-    document.getElementById('gateSubmit').addEventListener('click', tryUnlock);
-    passInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter') tryUnlock(); });
-  }
-
-  function updateUnlockIndicator(){
-    const statusBtn = document.getElementById('unlockStatus');
-    const writeBtn = document.getElementById('writeBtn');
-    const addSpotlightBtn = document.getElementById('addSpotlightBtn');
-    if(isUnlocked){
-      statusBtn.style.display = 'inline-flex';
-      statusBtn.innerHTML = `<span class="dot-lit"></span>${escapeHtml(currentUserEmail)} · Log out`;
-      writeBtn.style.display = 'inline-block';
-      writeBtn.textContent = '✎ Write Article';
-      addSpotlightBtn.style.display = 'inline-block';
-      addSpotlightBtn.textContent = '+ Add';
-    } else {
-      statusBtn.style.display = 'none';
-      writeBtn.style.display = 'none';
-      addSpotlightBtn.style.display = 'none';
-    }
     renderSpotlights();
   }
 
-  // ---------- editor modal ----------
-  function openEditor(existing){
-    const isEdit = !!existing;
-    const a = existing || {id:null, title:'', category:'Local', author:'', dek:'', body:'', imageUrl:'', format:'html', date:new Date().toISOString()};
-    let pendingImageUrl = a.imageUrl || null;
-    const dekInitialHtml = a.format === 'html' ? a.dek : plainToEditableHtml(a.dek);
-    const bodyInitialHtml = a.format === 'html' ? a.body : plainToEditableHtml(a.body);
-    const root = document.getElementById('modalRoot');
+  function renderArticlePage(article){
+    const root = document.getElementById('articlePageRoot');
+    if(!root) return;
     root.innerHTML = `
+      <article class="modal" style="margin:20px auto; max-width:800px;">
+        <button class="modal-close" id="closeArticlePageBtn">&times;</button>
+        <span class="eyebrow">${article.category || 'News'}</span>
+        <h1>${article.title}</h1>
+        <div class="byline" style="margin-bottom:16px;">By <b>${article.author || 'Staff'}</b> • ${fmtDate(article.date)} • ${readingTime(article)}</div>
+        ${article.imageUrl ? `<img src="${article.imageUrl}" class="modal-hero-image" alt="${article.title}">` : ''}
+        <div class="modal-dek">${article.dek || ''}</div>
+        <div class="modal-body modal-body-html">${sanitizeBodyHtml(article.body)}</div>
+        ${isUnlocked ? `
+          <div class="modal-actions">
+            <button id="editArticleBtn" data-id="${article.id}">Edit</button>
+            <button id="deleteArticleBtn" class="danger" data-id="${article.id}">Delete</button>
+          </div>
+        ` : ''}
+      </article>
+    `;
+
+    document.getElementById('closeArticlePageBtn')?.addEventListener('click', ()=>{
+      window.history.pushState({}, '', '/');
+      renderApp();
+    });
+
+    document.getElementById('editArticleBtn')?.addEventListener('click', ()=>{
+      openEditor(article);
+    });
+
+    document.getElementById('deleteArticleBtn')?.addEventListener('click', async ()=>{
+      if(confirm('Are you sure you want to delete this article?')){
+        await deleteDoc(doc(db, "articles", article.id));
+        toast("Article deleted");
+        window.history.pushState({}, '', '/');
+        renderApp();
+      }
+    });
+  }
+
+  function requireUnlock(callback){
+    if(isUnlocked){
+      if(callback) callback();
+      return;
+    }
+    const email = prompt("Admin Email:");
+    const password = prompt("Admin Password:");
+    if(email && password){
+      signInWithEmailAndPassword(auth, email, password).then(()=>{
+        toast("Unlocked successfully");
+        if(callback) callback();
+      }).catch(err => {
+        alert("Login failed: " + err.message);
+      });
+    }
+  }
+
+  function openEditor(article = null){
+    const modalHtml = `
       <div class="modal-overlay" id="editorOverlay">
         <div class="modal">
-          <button class="modal-close" aria-label="Close" id="editorClose">×</button>
-          <h1 style="font-size:24px;">${isEdit ? 'Edit Article' : 'Write New Article'}</h1>
+          <button class="modal-close" id="closeEditorBtn">&times;</button>
+          <h2>${article ? 'Edit Article' : 'New Article'}</h2>
           <div class="editor-field">
-            <label for="fTitle">Headline</label>
-            <input id="fTitle" type="text" value="${escapeAttr(a.title)}" placeholder="What happened?">
+            <label>Title</label>
+            <input type="text" id="eTitle" value="${article ? article.title : ''}">
           </div>
           <div class="editor-field">
-            <label for="fCategory">Section</label>
-            <select id="fCategory">
-              ${CATS.map(c=>`<option value="${c}" ${a.category===c?'selected':''}>${c}</option>`).join('')}
+            <label>Category</label>
+            <select id="eCategory">
+              ${CATS.map(c => `<option value="${c}" ${article && article.category === c ? 'selected' : ''}>${c}</option>`).join('')}
             </select>
           </div>
-          <label class="editor-check">
-            <input id="fDeveloping" type="checkbox" ${a.isDeveloping ? 'checked' : ''}>
-            Mark as DEVELOPING
-          </label>
           <div class="editor-field">
-            <label for="fAuthor">Byline (your name)</label>
-            <input id="fAuthor" type="text" value="${escapeAttr(a.author)}" placeholder="e.g. Jordan Reyes">
-          </div>
-          <div class="editor-field image-upload-wrap">
-            <label for="fImage">Photo (optional)</label>
-            <input id="fImage" type="file" accept="image/*">
-            <div id="imageStatus" class="image-status" style="display:none;"></div>
-            <img id="imagePreview" class="image-preview" src="${a.imageUrl || ''}" style="${a.imageUrl ? '' : 'display:none;'}" alt="">
-            <button type="button" id="removeImageBtn" class="remove-image-btn" style="${a.imageUrl ? '' : 'display:none;'}">Remove photo</button>
+            <label>Author</label>
+            <input type="text" id="eAuthor" value="${article ? article.author || '' : ''}">
           </div>
           <div class="editor-field">
-            <div class="rt-label-row">
-              <label for="fDek">Deck (one or two sentence summary)</label>
-              <button type="button" class="rt-maximize-btn" data-target="fDek">⤢ Expand</button>
-            </div>
-            <div class="rt-toolbar" data-for="fDek">
-              <button type="button" data-cmd="bold"><b>B</b></button>
-              <button type="button" data-cmd="italic"><i>I</i></button>
-              <button type="button" data-cmd="underline"><u>U</u></button>
-              <button type="button" class="rt-list-btn" data-cmd="removeFormat">Clear</button>
-            </div>
-            <div id="fDek" class="rt-editable" contenteditable="true" data-placeholder="A short summary readers see first...">${dekInitialHtml}</div>
+            <label>Summary / Deck</label>
+            <textarea id="eDek">${article ? article.dek || '' : ''}</textarea>
           </div>
           <div class="editor-field">
-            <div class="rt-label-row">
-              <label for="fBody">Full Article</label>
-              <button type="button" class="rt-maximize-btn" data-target="fBody">⤢ Expand</button>
-            </div>
-            <div class="rt-toolbar" data-for="fBody">
-              <button type="button" data-cmd="bold"><b>B</b></button>
-              <button type="button" data-cmd="italic"><i>I</i></button>
-              <button type="button" data-cmd="underline"><u>U</u></button>
-              <button type="button" class="rt-list-btn" data-cmd="insertUnorderedList">• List</button>
-              <button type="button" class="rt-list-btn" data-cmd="insertOrderedList">1. List</button>
-              <button type="button" class="rt-list-btn" data-cmd="removeFormat">Clear</button>
-            </div>
-            <div id="fBody" class="rt-editable" contenteditable="true" data-placeholder="Write the full story here...">${bodyInitialHtml}</div>
+            <label>Body Content</label>
+            <textarea id="eBody">${article ? article.body || '' : ''}</textarea>
           </div>
-          <div>
-            <button class="editor-save" id="saveArticleBtn">${isEdit ? 'Save Changes' : 'Publish Article'}</button>
-            <button class="editor-cancel" id="cancelEditorBtn">Cancel</button>
-          </div>
+          <button class="editor-save" id="saveArticleBtn">Save Article</button>
+          <button class="editor-cancel" id="cancelEditorBtn">Cancel</button>
         </div>
       </div>
     `;
-    wireRichTextControls(root);
-    document.getElementById('editorOverlay').addEventListener('click', (e)=>{
-      if(e.target.id === 'editorOverlay') closeModal();
-    });
-    document.getElementById('editorClose').addEventListener('click', closeModal);
-    document.getElementById('cancelEditorBtn').addEventListener('click', closeModal);
+    document.getElementById('modalRoot').innerHTML = modalHtml;
 
-    const fileInput = document.getElementById('fImage');
-    const preview = document.getElementById('imagePreview');
-    const status = document.getElementById('imageStatus');
-    const removeBtn = document.getElementById('removeImageBtn');
+    document.getElementById('closeEditorBtn').onclick = () => document.getElementById('modalRoot').innerHTML = '';
+    document.getElementById('cancelEditorBtn').onclick = () => document.getElementById('modalRoot').innerHTML = '';
 
-    fileInput.addEventListener('change', async ()=>{
-      const file = fileInput.files[0];
-      if(!file) return;
-      status.style.display = 'block';
-      status.textContent = 'Uploading photo…';
-      try{
-        const url = await uploadToCloudinary(file);
-        pendingImageUrl = url;
-        preview.src = url;
-        preview.style.display = 'block';
-        removeBtn.style.display = 'inline-block';
-        status.style.display = 'none';
-      }catch(e){
-        status.textContent = 'Upload failed — try a different photo.';
-      }
-    });
+    document.getElementById('saveArticleBtn').onclick = async () => {
+      const title = document.getElementById('eTitle').value.trim();
+      const category = document.getElementById('eCategory').value;
+      const author = document.getElementById('eAuthor').value.trim();
+      const dek = document.getElementById('eDek').value.trim();
+      const body = document.getElementById('eBody').value.trim();
 
-    removeBtn.addEventListener('click', ()=>{
-      pendingImageUrl = null;
-      fileInput.value = '';
-      preview.style.display = 'none';
-      removeBtn.style.display = 'none';
-    });
-
-    document.getElementById('saveArticleBtn').addEventListener('click', async ()=>{
-      const title = document.getElementById('fTitle').value.trim();
-      const category = document.getElementById('fCategory').value;
-      const isDeveloping = document.getElementById('fDeveloping').checked;
-      const author = document.getElementById('fAuthor').value.trim() || 'Staff Writer';
-      const dek = sanitizeRichHtml(document.getElementById('fDek').innerHTML.trim());
-      const body = sanitizeRichHtml(document.getElementById('fBody').innerHTML.trim());
-      const bodyPlain = stripHtml(body);
-      const dekPlain = stripHtml(dek);
-
-      if(!title || !bodyPlain){
-        toast('A headline and article body are required.');
+      if(!title || !body){
+        alert('Title and Body are required.');
         return;
       }
 
-      const record = {
-        title,
-        slug: createUniqueSlug(title, isEdit ? a.id : null),
-        category,
-        isDeveloping,
-        author,
-        dek: dek || plainToEditableHtml(excerpt(bodyPlain, 140)),
-        body,
-        format: 'html',
-        imageUrl: pendingImageUrl || null,
-        date: isEdit ? a.date : new Date().toISOString(),
-        ...(isEdit ? {} : {createdAt: serverTimestamp()})
+      const payload = {
+        title, category, author, dek, body,
+        date: article ? article.date : new Date().toISOString(),
+        slug: createUniqueSlug(title, article ? article.id : null)
       };
 
-      const saveBtn = document.getElementById('saveArticleBtn');
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving…';
-
-      const ok = isEdit ? await updateArticle(a.id, record) : await createArticle(record);
-      if(ok){
-        closeModal();
-        toast(isEdit ? 'Article updated.' : 'Article published.');
+      if(article){
+        await updateDoc(doc(db, "articles", article.id), payload);
+        toast("Article updated");
       } else {
-        saveBtn.disabled = false;
-        saveBtn.textContent = isEdit ? 'Save Changes' : 'Publish Article';
+        await addDoc(articlesRef, payload);
+        toast("Article created");
       }
-    });
+      document.getElementById('modalRoot').innerHTML = '';
+    };
   }
 
-  function escapeAttr(s){
-    return escapeHtml(s || '');
-  }
-
-  // ---------- business spotlight editor modal ----------
-  function openSpotlightEditor(existing){
-    const isEdit = !!existing;
-    const s = existing || {id:null, name:'', category:'', link:'', blurb:'', mediaUrl:'', mediaType:'image', date:null};
-    const existingMediaUrl = s.mediaUrl || s.imageUrl || '';
-    const existingMediaType = s.mediaType || (existingMediaUrl ? 'image' : 'image');
-    let pendingMediaUrl = existingMediaUrl || null;
-    let pendingMediaType = existingMediaType;
-    const root = document.getElementById('modalRoot');
-    root.innerHTML = `
-      <div class="modal-overlay" id="spotlightEditorOverlay">
-        <div class="modal">
-          <button class="modal-close" aria-label="Close" id="spotlightEditorClose">×</button>
-          <h1 style="font-size:24px;">${isEdit ? 'Edit Business' : 'Add Business Spotlight'}</h1>
-          <div class="editor-field">
-            <label for="fBizName">Business name</label>
-            <input id="fBizName" type="text" value="${escapeAttr(s.name)}" placeholder="e.g. Corner Bakery">
-          </div>
-          <div class="editor-field">
-            <label for="fBizCategory">Business category</label>
-            <input id="fBizCategory" type="text" value="${escapeAttr(s.category || '')}" placeholder="e.g. Restaurant, Retail, Professional services">
-          </div>
-          <div class="editor-field">
-            <label for="fBizLink">Website or social link</label>
-            <input id="fBizLink" type="url" value="${escapeAttr(s.link)}" placeholder="https://...">
-          </div>
-          <div class="editor-field image-upload-wrap">
-            <label for="fBizImage">Photo or short video (optional)</label>
-            <input id="fBizImage" type="file" accept="image/*,video/*">
-            <div id="bizImageStatus" class="image-status" style="display:none;"></div>
-            <div id="bizMediaPreviewWrap" style="${existingMediaUrl ? '' : 'display:none;'}">
-              ${existingMediaType === 'video'
-                ? `<video id="bizMediaPreview" class="image-preview" src="${existingMediaUrl}" controls muted playsinline></video>`
-                : `<img id="bizMediaPreview" class="image-preview" src="${existingMediaUrl}" alt="">`}
-              <button type="button" id="removeBizImageBtn" class="remove-image-btn">Remove</button>
-            </div>
-          </div>
-          <div class="editor-field">
-            <label for="fBizBlurb">Short blurb</label>
-            <textarea id="fBizBlurb" style="min-height:70px;" placeholder="What they offer, in a sentence or two...">${escapeHtml(s.blurb || '')}</textarea>
-          </div>
-          <div>
-            <button class="editor-save" id="saveBizBtn">${isEdit ? 'Save Changes' : 'Publish'}</button>
-            <button class="editor-cancel" id="cancelBizEditorBtn">Cancel</button>
-            ${isEdit ? `<button class="editor-cancel" id="deleteBizBtn" style="color:#a33;border-color:#a33;">Delete</button>` : ''}
-          </div>
-        </div>
-      </div>
-    `;
-    document.getElementById('spotlightEditorOverlay').addEventListener('click', (e)=>{
-      if(e.target.id === 'spotlightEditorOverlay') closeModal();
-    });
-    document.getElementById('spotlightEditorClose').addEventListener('click', closeModal);
-    document.getElementById('cancelBizEditorBtn').addEventListener('click', closeModal);
-
-    const fileInput = document.getElementById('fBizImage');
-    const previewWrap = document.getElementById('bizMediaPreviewWrap');
-    const status = document.getElementById('bizImageStatus');
-    let removeBtn = document.getElementById('removeBizImageBtn');
-
-    function renderPreview(url, type){
-      previewWrap.innerHTML = type === 'video'
-        ? `<video id="bizMediaPreview" class="image-preview" src="${url}" controls muted playsinline></video><button type="button" id="removeBizImageBtn" class="remove-image-btn">Remove</button>`
-        : `<img id="bizMediaPreview" class="image-preview" src="${url}" alt=""><button type="button" id="removeBizImageBtn" class="remove-image-btn">Remove</button>`;
-      previewWrap.style.display = 'block';
-      removeBtn = document.getElementById('removeBizImageBtn');
-      removeBtn.addEventListener('click', ()=>{
-        pendingMediaUrl = null;
-        fileInput.value = '';
-        previewWrap.style.display = 'none';
-        previewWrap.innerHTML = '';
-      });
-    }
-
-    if(removeBtn){
-      removeBtn.addEventListener('click', ()=>{
-        pendingMediaUrl = null;
-        fileInput.value = '';
-        previewWrap.style.display = 'none';
-        previewWrap.innerHTML = '';
-      });
-    }
-
-    fileInput.addEventListener('change', async ()=>{
-      const file = fileInput.files[0];
-      if(!file) return;
-      const isVideo = file.type.startsWith('video/');
-      status.style.display = 'block';
-      status.textContent = isVideo ? 'Uploading video…' : 'Compressing and uploading photo…';
-      try{
-        const uploadFile = isVideo ? file : await compressImageForUpload(file);
-        const url = isVideo ? await uploadVideoToCloudinary(uploadFile) : await uploadToCloudinary(uploadFile);
-        pendingMediaUrl = url;
-        pendingMediaType = isVideo ? 'video' : 'image';
-        renderPreview(url, pendingMediaType);
-        status.style.display = 'none';
-      }catch(e){
-        console.error('Could not upload Business Spotlight media.', {error:e, fileName:file.name, fileType:file.type});
-        status.textContent = 'Upload failed — try a different file.';
-      }
-    });
-
-    if(isEdit){
-      document.getElementById('deleteBizBtn').addEventListener('click', async ()=>{
-        if(confirm('Remove "'+s.name+'" from the spotlight?')){
-          const ok = await removeSpotlight(s.id);
-          if(ok){ closeModal(); toast('Business removed.'); }
-        }
-      });
-    }
-
-    document.getElementById('saveBizBtn').addEventListener('click', async ()=>{
-      const name = document.getElementById('fBizName').value.trim();
-      const category = document.getElementById('fBizCategory').value.trim() || 'Local Business';
-      const link = document.getElementById('fBizLink').value.trim();
-      const blurb = document.getElementById('fBizBlurb').value.trim();
-
-      if(!name){
-        toast('A business name is required.');
-        return;
-      }
-
-      const record = {
-        name,
-        category,
-        link,
-        blurb,
-        mediaUrl: pendingMediaUrl || null,
-        mediaType: pendingMediaType,
-        date: isEdit ? s.date : new Date().toISOString()
-      };
-
-      const saveBtn = document.getElementById('saveBizBtn');
-      saveBtn.disabled = true;
-      saveBtn.textContent = 'Saving…';
-
-      const ok = isEdit ? await updateSpotlight(s.id, record) : await createSpotlight(record);
-      if(ok){
-        closeModal();
-        toast(isEdit ? 'Spotlight updated.' : 'Spotlight published.');
-      } else {
-        saveBtn.disabled = false;
-        saveBtn.textContent = isEdit ? 'Save Changes' : 'Publish';
-      }
-    });
-  }
-
-  // ---------- Event Listeners & Auth Handler ----------
-  document.getElementById('writeBtn').addEventListener('click', ()=>{
-    requireUnlock(() => openEditor());
+  // Realtime Listeners
+  onSnapshot(query(articlesRef, orderBy("date", "desc")), snapshot => {
+    articles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderApp();
   });
 
-  document.getElementById('addSpotlightBtn').addEventListener('click', ()=>{
-    requireUnlock(() => openSpotlightEditor());
+  onSnapshot(spotlightsRef, snapshot => {
+    spotlights = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderSpotlights();
   });
 
-  document.getElementById('unlockStatus').addEventListener('click', async ()=>{
-    if(isUnlocked){
-      await signOut(auth);
-      toast('Logged out.');
-    }
-  });
-
-  document.getElementById('sectionNav').addEventListener('click', (e)=>{
-    const btn = e.target.closest('button[data-cat]');
-    if(!btn) return;
-    activeCat = btn.getAttribute('data-cat');
-    document.querySelectorAll('#sectionNav button[data-cat]').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    render();
-  });
-
-  document.getElementById('homeLangRow').addEventListener('click', (e)=>{
-    const btn = e.target.closest('.lang-btn');
-    if(!btn) return;
-    setHomeLanguage(btn.getAttribute('data-lang'), btn);
-  });
-
-  document.getElementById('subscribeForm').addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const emailInput = document.getElementById('subEmail');
-    const email = emailInput.value.trim();
-    if(!email) return;
-    try {
-      await addDoc(subscribersRef, { email, subscribedAt: serverTimestamp() });
-      emailInput.value = '';
-      toast('Thank you for subscribing!');
-    } catch(err) {
-      toast('Could not subscribe. Please try again.');
-    }
-  });
-
-  document.querySelectorAll('a[href="about-us.html"]').forEach(a=>{
-    a.addEventListener('click', (e)=>{
-      // Allow natural navigation to about-us.html
-    });
-  });
-
-  document.querySelectorAll('a[href="privacy-policy.html"]').forEach(a=>{
-    a.addEventListener('click', (e)=>{
-      e.preventDefault();
-      openLegalModal('privacy');
-    });
-  });
-
-  document.querySelectorAll('a[href="terms-of-service.html"]').forEach(a=>{
-    a.addEventListener('click', (e)=>{
-      e.preventDefault();
-      openLegalModal('terms');
-    });
-  });
-
-  // Auth State Listener
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      try {
-        const token = await user.getIdTokenResult();
-        if (token.claims.admin === true) {
-          isUnlocked = true;
-          currentUserEmail = user.email || "Editor";
-        } else {
-          isUnlocked = false;
-          currentUserEmail = "";
-        }
-      } catch (e) {
-        isUnlocked = false;
-        currentUserEmail = "";
-      }
+  // Auth Observer
+  onAuthStateChanged(auth, user => {
+    if(user && !user.isAnonymous){
+      isUnlocked = true;
+      currentUserEmail = user.email || "";
+      document.getElementById('writeBtn').style.display = 'inline-block';
+      document.getElementById('unlockStatus').style.display = 'inline-flex';
+      document.getElementById('addSpotlightBtn').style.display = 'inline-block';
     } else {
       isUnlocked = false;
       currentUserEmail = "";
+      document.getElementById('writeBtn').style.display = 'none';
+      document.getElementById('unlockStatus').style.display = 'none';
+      document.getElementById('addSpotlightBtn').style.display = 'none';
     }
-    updateUnlockIndicator();
+    renderApp();
+
+    if(new URLSearchParams(window.location.search).get('editor') === 'login'){
+      const url = new URL(window.location.href);
+      url.searchParams.delete('editor');
+      history.replaceState({}, '', url);
+      if(!isUnlocked){
+        requireUnlock();
+      }
+    }
   });
 
-  // Initialize Data
-  subscribeArticles();
-  subscribeSpotlights();
+  // Event Listeners
+  document.getElementById('writeBtn')?.addEventListener('click', () => {
+    requireUnlock(() => openEditor());
+  });
+
+  document.getElementById('sectionNav')?.addEventListener('click', e => {
+    if(e.target.tagName === 'BUTTON' && e.target.dataset.cat){
+      document.querySelectorAll('#sectionNav button').forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      activeCat = e.target.dataset.cat;
+      renderApp();
+    }
+  });
+
+  document.addEventListener('click', e => {
+    const card = e.target.closest('[data-id]');
+    if(!card) return;
+    const articleId = card.dataset.id;
+    const article = articles.find(a => a.id === articleId);
+    if(article && !e.target.classList.contains('spotlight-edit')){
+      window.history.pushState({}, '', articlePath(article));
+      renderApp();
+    }
+  });
+
 })();
 </script>
 </body>
