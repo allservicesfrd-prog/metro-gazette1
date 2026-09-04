@@ -522,7 +522,7 @@
   <span id="datelineDate">—</span>
 </div>
 
-<div class="site-container site-shell">
+<div class="site-container site-shell main-site-container">
 <nav class="section-nav">
   <div class="section-nav-inner sans" id="sectionNav">
     <button data-cat="All" class="active">À la une</button>
@@ -548,18 +548,18 @@
     <button class="lang-btn" data-lang="ht">Kreyòl</button>
     <span class="lang-status" id="homeLangStatus"></span>
   </div>
-  <div class="layout main-layout-grid" id="layoutRoot" style="display:none;">
-    <div class="content-column">
+  <div class="layout main-layout-grid editorial-grid" id="layoutRoot" style="display:none;">
+    <aside class="left-gallery-sidebar vertical-photo-gallery" aria-labelledby="verticalGalleryTitle">
+      <h2 id="verticalGalleryTitle" class="gallery-heading-sm gallery-section-title">PHOTOS</h2>
+      <div id="vertical-photo-list" class="vertical-photo-list"></div>
+    </aside>
+    <div class="content-column center-main-feed">
       <div class="ad-container ad-container--leaderboard" data-ad-placement="top-content" aria-label="Advertisement">
       </div>
       <div id="leadSlot"></div>
       <div class="grid-articles" id="gridSlot"></div>
     </div>
-    <aside class="sidebar-column">
-      <section class="vertical-photo-gallery" aria-labelledby="verticalGalleryTitle">
-        <h2 id="verticalGalleryTitle" class="gallery-heading-sm">PHOTOS</h2>
-        <div id="vertical-photo-list" class="vertical-photo-list"></div>
-      </section>
+    <aside class="sidebar-column right-headlines-sidebar">
       <div class="sidebar-box">
         <h3>Latest Headlines</h3>
         <div id="sidebarList"></div>
@@ -1056,8 +1056,8 @@ async function compressImageForUpload(file){
     const photoArticles = articles.filter(article=>article.imageUrl).slice(0, 5);
     container.innerHTML = photoArticles.map(article=>`
       <a class="vertical-photo-card" href="${escapeAttr(articlePath(article))}">
-        <img src="${escapeAttr(article.imageUrl)}" alt="${escapeAttr(article.title)}" loading="lazy">
-        <span class="vertical-photo-overlay"><span class="vertical-photo-title">${escapeHtml(article.title)}</span></span>
+        <span class="thumb-wrapper"><img src="${escapeAttr(article.imageUrl)}" alt="${escapeAttr(article.title)}" loading="lazy"></span>
+        <span class="card-caption">${escapeHtml(article.title)}</span>
       </a>
     `).join('') || '<p class="photos-empty">Photo stories will appear here.</p>';
   }
