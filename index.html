@@ -1903,22 +1903,19 @@ async function compressImageForUpload(file){
       const link = document.getElementById('fBizLink').value.trim();
       const blurb = document.getElementById('fBizBlurb').value.trim();
 
-      if(!name || !link){
-        toast('A business name and link are required.');
+      if(!name){
+        toast('A business name is required.');
         return;
       }
 
-      // Media and blurb are intentionally optional; Firestore receives null or
-      // an empty string when the editor leaves them blank.
       const record = {
         name,
         category,
         link,
         blurb,
         mediaUrl: pendingMediaUrl || null,
-        mediaType: pendingMediaUrl ? pendingMediaType : null,
-        imageUrl: pendingMediaUrl && pendingMediaType === 'image' ? pendingMediaUrl : null,
-        date: serverTimestamp()
+        mediaType: pendingMediaType,
+        date: isEdit ? s.date : new Date().toISOString()
       };
 
       const saveBtn = document.getElementById('saveBizBtn');
@@ -1928,7 +1925,7 @@ async function compressImageForUpload(file){
       const ok = isEdit ? await updateSpotlight(s.id, record) : await createSpotlight(record);
       if(ok){
         closeModal();
-        toast(isEdit ? 'Business updated.' : 'Business published.');
+        toast(isEdit ? 'Spotlight updated.' : 'Spotlight published.');
       } else {
         saveBtn.disabled = false;
         saveBtn.textContent = isEdit ? 'Save Changes' : 'Publish';
@@ -1936,86 +1933,98 @@ async function compressImageForUpload(file){
     });
   }
 
-  // ---------- nav ----------
-  document.getElementById('sectionNav').addEventListener('click', (e)=>{
-    const btn = e.target.closest('button[data-cat]');
-    if(!btn) return;
-    activeCat = btn.getAttribute('data-cat');
-    document.querySelectorAll('#sectionNav button[data-cat]').forEach(b=>b.classList.toggle('active', b===btn));
-    render();
+  // ---------- Event Listeners & Auth Handler ----------
+  document.getElementById('writeBtn').addEventListener('click', ()=>{
+    requireUnlock(() => openEditor());
   });
 
-  document.querySelectorAll('#homeLangRow .lang-btn').forEach(btn=>{
-    btn.addEventListener('click', ()=> setHomeLanguage(btn.getAttribute('data-lang'), btn));
+  document.getElementById('addSpotlightBtn').addEventListener('click', ()=>{
+    requireUnlock(() => openSpotlightEditor());
   });
-
-  document.getElementById('writeBtn').addEventListener('click', ()=> requireUnlock(()=> openEditor(null)));
 
   document.getElementById('unlockStatus').addEventListener('click', async ()=>{
-    if(confirm('Log out of the editor?')){
+    if(isUnlocked){
       await signOut(auth);
       toast('Logged out.');
     }
   });
 
-  document.getElementById('addSpotlightBtn').addEventListener('click', ()=> requireUnlock(()=> openSpotlightEditor(null)));
+  document.getElementById('sectionNav').addEventListener('click', (e)=>{
+    const btn = e.target.closest('button[data-cat]');
+    if(!btn) return;
+    activeCat = btn.getAttribute('data-cat');
+    document.querySelectorAll('#sectionNav button[data-cat]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  });
+
+  document.getElementById('homeLangRow').addEventListener('click', (e)=>{
+    const btn = e.target.closest('.lang-btn');
+    if(!btn) return;
+    setHomeLanguage(btn.getAttribute('data-lang'), btn);
+  });
 
   document.getElementById('subscribeForm').addEventListener('submit', async (e)=>{
     e.preventDefault();
-    const val = document.getElementById('subEmail').value.trim();
-    const button = document.getElementById('subBtn');
-    if(!val || !document.getElementById('subEmail').checkValidity()){
-      toast('Enter a valid email to subscribe.');
-      return;
-    }
-
-    button.disabled = true;
-    button.textContent = 'Subscribing…';
-    try{
-      await addDoc(subscribersRef, {
-        email: val.toLowerCase(),
-        subscribedAt: serverTimestamp()
-      });
-      document.getElementById('subEmail').value = '';
-      toast('You’re subscribed to the Morning Edition. Thank you!');
-    }catch(error){
-      console.error('Could not save newsletter subscriber in Firestore.', error);
-      toast('We could not save your subscription. Please try again.');
-    }finally{
-      button.disabled = false;
-      button.textContent = 'Subscribe';
+    const emailInput = document.getElementById('subEmail');
+    const email = emailInput.value.trim();
+    if(!email) return;
+    try {
+      await addDoc(subscribersRef, { email, subscribedAt: serverTimestamp() });
+      emailInput.value = '';
+      toast('Thank you for subscribing!');
+    } catch(err) {
+      toast('Could not subscribe. Please try again.');
     }
   });
 
-  // ---------- init ----------
-  onAuthStateChanged(auth, async (user)=>{
-    let isAdmin = false;
-    if(user && !user.isAnonymous){
-      try{
+  document.querySelectorAll('a[href="about-us.html"]').forEach(a=>{
+    a.addEventListener('click', (e)=>{
+      // Allow natural navigation to about-us.html
+    });
+  });
+
+  document.querySelectorAll('a[href="privacy-policy.html"]').forEach(a=>{
+    a.addEventListener('click', (e)=>{
+      e.preventDefault();
+      openLegalModal('privacy');
+    });
+  });
+
+  document.querySelectorAll('a[href="terms-of-service.html"]').forEach(a=>{
+    a.addEventListener('click', (e)=>{
+      e.preventDefault();
+      openLegalModal('terms');
+    });
+  });
+
+  // Auth State Listener
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      try {
         const token = await user.getIdTokenResult();
-        isAdmin = token.claims.admin === true;
-      }catch(error){
-        console.error('Could not verify editor admin claim.', error);
+        if (token.claims.admin === true) {
+          isUnlocked = true;
+          currentUserEmail = user.email || "Editor";
+        } else {
+          isUnlocked = false;
+          currentUserEmail = "";
+        }
+      } catch (e) {
+        isUnlocked = false;
+        currentUserEmail = "";
       }
+    } else {
+      isUnlocked = false;
+      currentUserEmail = "";
     }
-    isUnlocked = isAdmin;
-    currentUserEmail = isAdmin ? user.email : "";
     updateUnlockIndicator();
-    const routeArticle = findArticleForCurrentRoute();
-    if(routeArticle) openReader(routeArticle.id, {skipPush:true});
-    if(!isUnlocked && new URLSearchParams(window.location.search).get('editor') === 'login'){
-      const url = new URL(window.location.href);
-      url.searchParams.delete('editor');
-      history.replaceState({}, '', url);
-      requireUnlock(()=> openEditor(null));
-    }
   });
 
+  // Initialize Data
   subscribeArticles();
   subscribeSpotlights();
-
 })();
 </script>
-
 </body>
 </html>
