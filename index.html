@@ -503,7 +503,7 @@
 
 <div class="utility-bar">
   <span><span class="clock-dot"></span><span id="liveClock">—</span></span>
-  <span class="utility-bar__right"><span id="editionLabel">City Edition</span><a id="editorLoginLink" href="/?editor=login">S'IDENTIFIER</a></span>
+  <span id="editionLabel">City Edition</span>
 </div>
 
 <header class="masthead">
@@ -520,18 +520,15 @@
 
 <div class="dateline" id="datelineStrip">
   <span id="datelineDate">—</span>
-  <span>•</span>
-  <span><b id="articleCount">0</b> stories published</span>
 </div>
 
 <nav class="section-nav">
   <div class="section-nav-inner sans" id="sectionNav">
     <button data-cat="All" class="active">À la une</button>
-    <button data-cat="All">À la minute</button>
     <button data-cat="Politics">Politics</button>
     <button data-cat="Culture">Culture</button>
     <button data-cat="Economy">Economy</button>
-    <button data-cat="Tech">Tech</button>
+    <button data-cat="Sport">Sport</button>
     <a href="about-us.html" class="nav-link">About Us</a>
     <div class="spacer"></div>
     <button class="unlock-status" id="unlockStatus" style="display:none;"><span class="dot-lit"></span>Editor unlocked</button>
@@ -550,7 +547,7 @@
     <button class="lang-btn" data-lang="ht">Kreyòl</button>
     <span class="lang-status" id="homeLangStatus"></span>
   </div>
-  <div class="layout" id="layoutRoot" style="display:none;">
+  <div class="layout main-layout-grid" id="layoutRoot" style="display:none;">
     <div class="content-column">
       <div class="ad-container ad-container--leaderboard" data-ad-placement="top-content" aria-label="Advertisement">
       </div>
@@ -558,6 +555,10 @@
       <div class="grid-articles" id="gridSlot"></div>
     </div>
     <aside class="sidebar-column">
+      <section class="vertical-photo-gallery" aria-labelledby="verticalGalleryTitle">
+        <h2 id="verticalGalleryTitle" class="gallery-heading-sm">PHOTOS</h2>
+        <div id="vertical-photo-list" class="vertical-photo-list"></div>
+      </section>
       <div class="sidebar-box">
         <h3>Latest Headlines</h3>
         <div id="sidebarList"></div>
@@ -697,7 +698,7 @@ async function compressImageForUpload(file){
 }
 
 (function(){
-  const CATS = ["Politics","Culture","Economy","Tech","Local","Business","Sports","Opinion","World"];
+  const CATS = ["Politics","Culture","Economy","Sport","Local","Business","Sports","Opinion","World"];
   const SITE_URL = 'https://metrogazette.net';
   const DEFAULT_SOCIAL_IMAGE = `${SITE_URL}/metro-gazette-social.jpg`;
   let articles = [];
@@ -880,7 +881,7 @@ async function compressImageForUpload(file){
   // ---------- firestore ----------
   let initialArticleChecked = false;
   function subscribeArticles(){
-    const q = query(articlesRef, orderBy("date", "desc"));
+    const q = query(articlesRef, orderBy("createdAt", "desc"));
     onSnapshot(q, (snapshot)=>{
       articles = snapshot.docs.map(d=> ({ id: d.id, ...d.data() }));
       document.getElementById('loadingRow').style.display = 'none';
@@ -994,9 +995,12 @@ async function compressImageForUpload(file){
 
   // ---------- rendering ----------
   function render(){
-    document.getElementById('articleCount').textContent = articles.length;
+    const articleCount = document.getElementById('articleCount');
+    if(articleCount) articleCount.textContent = articles.length;
 
-    const filtered = activeCat === "All" ? articles : articles.filter(a=>a.category===activeCat);
+    const filtered = activeCat === "All" ? articles : articles.filter(a=>
+      activeCat === 'Sport' ? (a.category === 'Sport' || a.category === 'Sports') : a.category === activeCat
+    );
 
     const leadSlot = document.getElementById('leadSlot');
     const gridSlot = document.getElementById('gridSlot');
@@ -1021,6 +1025,7 @@ async function compressImageForUpload(file){
     `).join('') || '<div class="sidebar-item" style="cursor:default;">Nothing published yet.</div>';
 
     renderPhotos();
+    renderVerticalPhotoGallery();
 
     document.querySelectorAll('[data-open-id]').forEach(el=>{
       el.addEventListener('click', ()=> openReader(el.getAttribute('data-open-id')));
@@ -1039,6 +1044,18 @@ async function compressImageForUpload(file){
         <img src="${escapeAttr(article.imageUrl)}" alt="${escapeAttr(article.title)}" loading="lazy">
         <span class="photo-card__overlay"></span>
         <span class="photo-card__title">${escapeHtml(article.title)}</span>
+      </a>
+    `).join('') || '<p class="photos-empty">Photo stories will appear here.</p>';
+  }
+
+  function renderVerticalPhotoGallery(){
+    const container = document.getElementById('vertical-photo-list');
+    if(!container) return;
+    const photoArticles = articles.filter(article=>article.imageUrl).slice(0, 5);
+    container.innerHTML = photoArticles.map(article=>`
+      <a class="vertical-photo-card" href="${escapeAttr(articlePath(article))}">
+        <img src="${escapeAttr(article.imageUrl)}" alt="${escapeAttr(article.title)}" loading="lazy">
+        <span class="vertical-photo-overlay"><span class="vertical-photo-title">${escapeHtml(article.title)}</span></span>
       </a>
     `).join('') || '<p class="photos-empty">Photo stories will appear here.</p>';
   }
@@ -1742,7 +1759,8 @@ async function compressImageForUpload(file){
         body,
         format: 'html',
         imageUrl: pendingImageUrl || null,
-        date: isEdit ? a.date : new Date().toISOString()
+        date: isEdit ? a.date : new Date().toISOString(),
+        ...(isEdit ? {} : {createdAt: serverTimestamp()})
       };
 
       const saveBtn = document.getElementById('saveArticleBtn');
@@ -1981,7 +1999,7 @@ async function compressImageForUpload(file){
     updateUnlockIndicator();
     const routeArticle = findArticleForCurrentRoute();
     if(routeArticle) openReader(routeArticle.id, {skipPush:true});
-    if(!user && new URLSearchParams(window.location.search).get('editor') === 'login'){
+    if(!isUnlocked && new URLSearchParams(window.location.search).get('editor') === 'login'){
       const url = new URL(window.location.href);
       url.searchParams.delete('editor');
       history.replaceState({}, '', url);
