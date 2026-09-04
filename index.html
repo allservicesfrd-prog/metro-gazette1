@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google-site-verification" content="m7hZjx4z-_VvyVWqPXEY2zWKcszLUVI2kWk0IBJf3l0">
 <title>Metro Gazette — News That Matters</title>
 <link id="canonicalUrl" rel="canonical" href="https://metrogazette.net/">
 <meta id="metaDescription" name="description" content="Metro-Gazette delivers timely, accurate reporting from the Dominican Republic, the Caribbean, and around the world.">
@@ -507,10 +508,12 @@
 
 <header class="masthead">
   <div class="masthead-inner">
-    <div class="masthead-name">
-      <span class="clock-icon" aria-hidden="true"></span>
-      METRO <span class="accent">GAZETTE</span>
-    </div>
+    <a href="/" class="logo-link" aria-label="Metro Gazette Home">
+      <div class="masthead-name">
+        <span class="clock-icon" aria-hidden="true"></span>
+        METRO <span class="accent">GAZETTE</span>
+      </div>
+    </a>
     <div class="masthead-tagline"><span class="rule"></span>News That Matters<span class="rule"></span></div>
   </div>
 </header>
@@ -523,12 +526,11 @@
 
 <nav class="section-nav">
   <div class="section-nav-inner sans" id="sectionNav">
-    <button data-cat="All" class="active">All</button>
-    <button data-cat="Local">Local</button>
-    <button data-cat="Business">Business</button>
-    <button data-cat="Sports">Sports</button>
-    <button data-cat="Opinion">Opinion</button>
-    <button data-cat="World">World</button>
+    <a href="/" class="nav-link active">Home</a>
+    <a href="/dashboard.html" class="nav-link">Dashboard</a>
+    <button data-cat="Politics">Politics</button>
+    <button data-cat="Tech">Tech</button>
+    <a href="about-us.html" class="nav-link">About Us</a>
     <div class="spacer"></div>
     <button class="unlock-status" id="unlockStatus" style="display:none;"><span class="dot-lit"></span>Editor unlocked</button>
     <button class="write-btn" id="writeBtn" style="display:none;">Write Article</button>
@@ -614,7 +616,7 @@ import {
   onSnapshot, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 import {
-  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
+  getAuth, signInWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -686,7 +688,7 @@ async function compressImageForUpload(file){
 }
 
 (function(){
-  const CATS = ["Local","Business","Sports","Opinion","World"];
+  const CATS = ["Politics","Tech","Local","Business","Sports","Opinion","World"];
   const SITE_URL = 'https://metrogazette.net';
   const DEFAULT_SOCIAL_IMAGE = `${SITE_URL}/metro-gazette-social.jpg`;
   let articles = [];
@@ -810,6 +812,17 @@ async function compressImageForUpload(file){
     return Number.isNaN(date.getTime()) ? 'Just now' : date.toLocaleDateString([], {month:'short', day:'numeric'});
   }
 
+  async function ensureCommentIdentity(){
+    if(auth.currentUser) return auth.currentUser;
+    try{
+      const credential = await signInAnonymously(auth);
+      return credential.user;
+    }catch(error){
+      console.error('Anonymous Firebase sign-in for comments failed.', error);
+      throw new Error('Comment sign-in is unavailable.');
+    }
+  }
+
   function subscribeComments(article, root){
     if(unsubscribeComments) unsubscribeComments();
     const list = root.querySelector('#commentList');
@@ -821,7 +834,7 @@ async function compressImageForUpload(file){
       }).join('') || '<p class="comments-empty">Be the first to comment.</p>';
     }, error=>{
       console.error('Could not load article comments.', error);
-      list.innerHTML = '<p class="comments-empty">Comments are unavailable right now.</p>';
+      list.innerHTML = '<p class="comments-empty">Discussion is loading. If it does not appear, please try again shortly.</p>';
     });
 
     root.querySelector('#commentForm').addEventListener('submit', async event=>{
@@ -836,12 +849,18 @@ async function compressImageForUpload(file){
       button.disabled = true;
       button.textContent = 'Posting…';
       try{
-        await addDoc(commentsRef, {name, body, createdAt: serverTimestamp()});
+        const user = await ensureCommentIdentity();
+        await addDoc(commentsRef, {name, body, createdAt: serverTimestamp(), authorId: user.uid});
         root.querySelector('#commentBody').value = '';
-        toast('Comment posted.');
+        const confirmation = root.querySelector('#commentConfirmation');
+        confirmation.textContent = 'Comment posted successfully!';
+        confirmation.hidden = false;
+        toast('Comment posted successfully!');
       }catch(error){
         console.error('Could not save article comment.', error);
-        toast('Could not post your comment. Please try again.');
+        const confirmation = root.querySelector('#commentConfirmation');
+        confirmation.textContent = 'Your comment could not be posted. Please try again.';
+        confirmation.hidden = false;
       }finally{
         button.disabled = false;
         button.textContent = 'Post comment';
@@ -1340,6 +1359,7 @@ async function compressImageForUpload(file){
             <textarea id="commentBody" maxlength="1000" placeholder="Join the discussion…" required></textarea>
             <button id="commentSubmit" type="submit">Post comment</button>
           </form>
+          <p id="commentConfirmation" class="comment-confirmation" role="status" hidden></p>
           <div id="commentList" class="comment-list"><p class="comments-empty">Loading comments…</p></div>
         </section>
         ${isUnlocked ? `<div class="article-page__actions"><button id="editBtn">Edit</button><button class="danger" id="deleteBtn">Delete</button></div>` : ''}
@@ -1918,8 +1938,8 @@ async function compressImageForUpload(file){
 
   // ---------- init ----------
   onAuthStateChanged(auth, (user)=>{
-    isUnlocked = !!user;
-    currentUserEmail = user ? user.email : "";
+    isUnlocked = !!user && !user.isAnonymous;
+    currentUserEmail = isUnlocked ? user.email : "";
     updateUnlockIndicator();
     const routeArticle = findArticleForCurrentRoute();
     if(routeArticle) openReader(routeArticle.id, {skipPush:true});
