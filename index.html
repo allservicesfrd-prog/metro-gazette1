@@ -503,7 +503,7 @@
 
 <div class="utility-bar">
   <span><span class="clock-dot"></span><span id="liveClock">—</span></span>
-  <span id="editionLabel" class="sans">City Edition</span>
+  <span class="utility-bar__right"><span id="editionLabel">City Edition</span><a id="editorLoginLink" href="/?editor=login">S'IDENTIFIER</a></span>
 </div>
 
 <header class="masthead">
@@ -526,9 +526,11 @@
 
 <nav class="section-nav">
   <div class="section-nav-inner sans" id="sectionNav">
-    <a href="/" class="nav-link active">Home</a>
-    <a href="/dashboard.html" class="nav-link">Dashboard</a>
+    <button data-cat="All" class="active">À la une</button>
+    <button data-cat="All">À la minute</button>
     <button data-cat="Politics">Politics</button>
+    <button data-cat="Culture">Culture</button>
+    <button data-cat="Economy">Economy</button>
     <button data-cat="Tech">Tech</button>
     <a href="about-us.html" class="nav-link">About Us</a>
     <div class="spacer"></div>
@@ -588,6 +590,13 @@
       </div>
     </aside>
   </div>
+  <section class="photos-gallery-section site-container" aria-labelledby="photosTitle">
+    <div class="gallery-header">
+      <h2 id="photosTitle" class="gallery-title">PHOTOS</h2>
+      <a href="#more-photos" class="btn-more-photos">More Photos ›</a>
+    </div>
+    <div id="photos-grid" class="photos-grid"></div>
+  </section>
 </main>
 
 <main id="articlePageRoot" class="article-page-root" hidden aria-live="polite"></main>
@@ -688,7 +697,7 @@ async function compressImageForUpload(file){
 }
 
 (function(){
-  const CATS = ["Politics","Tech","Local","Business","Sports","Opinion","World"];
+  const CATS = ["Politics","Culture","Economy","Tech","Local","Business","Sports","Opinion","World"];
   const SITE_URL = 'https://metrogazette.net';
   const DEFAULT_SOCIAL_IMAGE = `${SITE_URL}/metro-gazette-social.jpg`;
   let articles = [];
@@ -1011,12 +1020,27 @@ async function compressImageForUpload(file){
       </div>
     `).join('') || '<div class="sidebar-item" style="cursor:default;">Nothing published yet.</div>';
 
+    renderPhotos();
+
     document.querySelectorAll('[data-open-id]').forEach(el=>{
       el.addEventListener('click', ()=> openReader(el.getAttribute('data-open-id')));
     });
     document.querySelectorAll('.sidebar-item[data-id]').forEach(el=>{
       el.addEventListener('click', ()=> openReader(el.getAttribute('data-id')));
     });
+  }
+
+  function renderPhotos(){
+    const grid = document.getElementById('photos-grid');
+    if(!grid) return;
+    const photoArticles = articles.filter(article=>article.imageUrl).slice(0, 4);
+    grid.innerHTML = photoArticles.map(article=>`
+      <a class="photo-card" href="${escapeAttr(articlePath(article))}">
+        <img src="${escapeAttr(article.imageUrl)}" alt="${escapeAttr(article.title)}" loading="lazy">
+        <span class="photo-card__overlay"></span>
+        <span class="photo-card__title">${escapeHtml(article.title)}</span>
+      </a>
+    `).join('') || '<p class="photos-empty">Photo stories will appear here.</p>';
   }
 
   function renderSpotlights(){
@@ -1542,7 +1566,12 @@ async function compressImageForUpload(file){
       submitBtn.disabled = true;
       submitBtn.textContent = 'Logging in…';
       try{
-        await signInWithEmailAndPassword(auth, emailInput.value.trim(), passInput.value);
+        const credential = await signInWithEmailAndPassword(auth, emailInput.value.trim(), passInput.value);
+        const token = await credential.user.getIdTokenResult(true);
+        if(token.claims.admin !== true){
+          await signOut(auth);
+          throw new Error('This account is not an editor admin.');
+        }
         closeModal();
         toast('Logged in.');
         onSuccess();
@@ -1937,9 +1966,18 @@ async function compressImageForUpload(file){
   });
 
   // ---------- init ----------
-  onAuthStateChanged(auth, (user)=>{
-    isUnlocked = !!user && !user.isAnonymous;
-    currentUserEmail = isUnlocked ? user.email : "";
+  onAuthStateChanged(auth, async (user)=>{
+    let isAdmin = false;
+    if(user && !user.isAnonymous){
+      try{
+        const token = await user.getIdTokenResult();
+        isAdmin = token.claims.admin === true;
+      }catch(error){
+        console.error('Could not verify editor admin claim.', error);
+      }
+    }
+    isUnlocked = isAdmin;
+    currentUserEmail = isAdmin ? user.email : "";
     updateUnlockIndicator();
     const routeArticle = findArticleForCurrentRoute();
     if(routeArticle) openReader(routeArticle.id, {skipPush:true});
