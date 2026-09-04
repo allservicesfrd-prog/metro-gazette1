@@ -1,0 +1,22 @@
+# Firebase & Security Keys (Crucial)
+serviceAccountKey.json
+*.pem
+.env
+.env.local
+
+# Node Dependencies
+node_modules/
+
+# Cloudflare & Build Out
+.wrangler/
+dist/
+build/
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor Settings
+.vscode/
+.idea/
