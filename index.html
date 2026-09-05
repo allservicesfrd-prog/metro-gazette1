@@ -651,14 +651,12 @@ const spotlightsRef = collection(db, "spotlights");
 
 (function() {
   const CATS = ["Politics", "Culture", "Economy", "Sport", "Local", "Business", "Sports", "Opinion", "World"];
-  const SITE_URL = 'https://metrogazette.net';
   
   let articles = [];
   let spotlights = [];
   let activeCat = "All";
   let isUnlocked = false;
 
-  // Clock & Dateline
   function updateClock() {
     const el = document.getElementById('liveClock');
     if (el) el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -713,7 +711,46 @@ const spotlightsRef = collection(db, "spotlights");
     return legacyId ? articles.find(a => a.id === legacyId) || null : null;
   }
 
-  // Render Spotlights
+  // Gallery Renderers
+  function renderLeftGallery() {
+    const container = document.getElementById('vertical-photo-list');
+    if (!container) return;
+    const photoArticles = articles.filter(a => a.imageUrl).slice(0, 5);
+    
+    if (photoArticles.length === 0) {
+      container.innerHTML = '<div class="spotlight-empty">No photos available.</div>';
+      return;
+    }
+
+    container.innerHTML = photoArticles.map(item => `
+      <a href="${articlePath(item)}" class="vertical-photo-card" data-id="${item.id}">
+        <div class="thumb-wrapper">
+          <img src="${item.imageUrl}" alt="${item.title}">
+        </div>
+        <div class="card-caption">${item.title}</div>
+      </a>
+    `).join('');
+  }
+
+  function renderBottomGallery() {
+    const container = document.getElementById('photos-grid');
+    if (!container) return;
+    const photoArticles = articles.filter(a => a.imageUrl).slice(0, 4);
+
+    if (photoArticles.length === 0) {
+      container.innerHTML = '<p class="photos-empty">No photos available in the gallery.</p>';
+      return;
+    }
+
+    container.innerHTML = photoArticles.map(item => `
+      <a href="${articlePath(item)}" class="photo-card" data-id="${item.id}">
+        <img src="${item.imageUrl}" alt="${item.title}">
+        <div class="photo-card__overlay"></div>
+        <div class="photo-card__title">${item.title}</div>
+      </a>
+    `).join('');
+  }
+
   function renderSpotlights() {
     const list = document.getElementById('spotlightList');
     if (!list) return;
@@ -721,12 +758,15 @@ const spotlightsRef = collection(db, "spotlights");
       list.innerHTML = `<div class="spotlight-empty">No business spotlights available.</div>`;
       return;
     }
+    
     list.innerHTML = spotlights.map(item => `
       <div class="spotlight-item" data-spotlight-id="${item.id}">
-        ${item.imageUrl ? `<img src="${item.imageUrl}" class="spotlight-thumb" alt="${item.name}">` : `<div class="spotlight-thumb"></div>`}
+        ${item.imageUrl 
+          ? `<img src="${item.imageUrl}" class="spotlight-thumb" alt="${item.name}">` 
+          : `<div class="spotlight-thumb"></div>`}
         <div class="spotlight-info">
-          <div class="spotlight-name">${item.name}</div>
-          <div class="spotlight-blurb">${item.blurb || ''}</div>
+          <div class="spotlight-name" style="color: #ffffff; font-weight: 700; font-size: 14px;">${item.name}</div>
+          <div class="spotlight-blurb" style="color: #cbd5e1; font-size: 12px; margin-top: 2px;">${item.blurb || ''}</div>
         </div>
         ${isUnlocked ? `<button class="spotlight-edit-btn" data-id="${item.id}">✏️</button>` : ''}
       </div>
@@ -743,7 +783,6 @@ const spotlightsRef = collection(db, "spotlights");
     }
   }
 
-  // Main Render Logic
   function renderApp() {
     const layoutRoot = document.getElementById('layoutRoot');
     const loadingRow = document.getElementById('loadingRow');
@@ -772,6 +811,8 @@ const spotlightsRef = collection(db, "spotlights");
       if (gridSlot) gridSlot.innerHTML = '';
       if (sidebarList) sidebarList.innerHTML = '';
       renderSpotlights();
+      renderLeftGallery();
+      renderBottomGallery();
       return;
     }
 
@@ -810,6 +851,8 @@ const spotlightsRef = collection(db, "spotlights");
     }
 
     renderSpotlights();
+    renderLeftGallery();
+    renderBottomGallery();
   }
 
   function renderArticlePage(article) {
@@ -867,7 +910,6 @@ const spotlightsRef = collection(db, "spotlights");
     }
   }
 
-  // Article Editor Modal
   function openEditor(article = null) {
     const modalHtml = `
       <div class="modal-overlay" id="editorOverlay">
@@ -939,7 +981,6 @@ const spotlightsRef = collection(db, "spotlights");
     };
   }
 
-  // Business Spotlight Editor Modal
   function openSpotlightEditor(spotlight = null) {
     const modalHtml = `
       <div class="modal-overlay" id="spotlightOverlay">
@@ -1002,7 +1043,6 @@ const spotlightsRef = collection(db, "spotlights");
     }
   }
 
-  // Firestore Snapshots
   onSnapshot(query(articlesRef, orderBy("date", "desc")), snapshot => {
     articles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     renderApp();
@@ -1013,7 +1053,6 @@ const spotlightsRef = collection(db, "spotlights");
     renderSpotlights();
   });
 
-  // Auth Observer
   onAuthStateChanged(auth, user => {
     if (user && !user.isAnonymous) {
       isUnlocked = true;
@@ -1029,7 +1068,6 @@ const spotlightsRef = collection(db, "spotlights");
     renderApp();
   });
 
-  // Global Event Listeners
   document.getElementById('writeBtn')?.addEventListener('click', () => requireUnlock(() => openEditor()));
   document.getElementById('addSpotlightBtn')?.addEventListener('click', () => requireUnlock(() => openSpotlightEditor()));
 
