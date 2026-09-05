@@ -910,44 +910,81 @@ const spotlightsRef = collection(db, "spotlights");
     }
   }
 
+  // Article Editor Modal with Rich Text Formatting & Expand
   function openEditor(article = null) {
     const modalHtml = `
       <div class="modal-overlay" id="editorOverlay">
-        <div class="modal">
+        <div class="modal" style="max-width: 800px;">
           <button class="modal-close" id="closeEditorBtn">&times;</button>
           <h2>${article ? 'Edit Article' : 'New Article'}</h2>
+          
           <div class="editor-field">
             <label>Title</label>
             <input type="text" id="eTitle" value="${article ? article.title || '' : ''}">
           </div>
+
           <div class="editor-field">
             <label>Category</label>
             <select id="eCategory">
               ${CATS.map(c => `<option value="${c}" ${article && article.category === c ? 'selected' : ''}>${c}</option>`).join('')}
             </select>
           </div>
+
           <div class="editor-field">
             <label>Author</label>
             <input type="text" id="eAuthor" value="${article ? article.author || '' : ''}">
           </div>
+
           <div class="editor-field">
             <label>Image URL</label>
             <input type="url" id="eImageUrl" placeholder="https://..." value="${article ? article.imageUrl || '' : ''}">
           </div>
+
           <div class="editor-field">
-            <label>Summary / Dek</label>
-            <textarea id="eDek">${article ? article.dek || '' : ''}</textarea>
+            <div class="rt-label-row" style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <label style="margin:0;">Summary / Dek</label>
+              <button class="rt-maximize-btn" type="button" data-target="fDek">Expand ⤢</button>
+            </div>
+            <div class="rt-toolbar">
+              <button type="button" onclick="document.execCommand('bold', false, null)"><b>B</b></button>
+              <button type="button" onclick="document.execCommand('italic', false, null)"><i>I</i></button>
+              <button type="button" onclick="document.execCommand('underline', false, null)"><u>U</u></button>
+            </div>
+            <div class="rt-editable" id="fDek" contenteditable="true">${article ? article.dek || '' : ''}</div>
           </div>
+
           <div class="editor-field">
-            <label>Body Content</label>
-            <textarea id="eBody">${article ? article.body || '' : ''}</textarea>
+            <div class="rt-label-row" style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <label style="margin:0;">Body Content</label>
+              <button class="rt-maximize-btn" type="button" data-target="fBody">Expand ⤢</button>
+            </div>
+            <div class="rt-toolbar">
+              <button type="button" onclick="document.execCommand('bold', false, null)"><b>B</b></button>
+              <button type="button" onclick="document.execCommand('italic', false, null)"><i>I</i></button>
+              <button type="button" onclick="document.execCommand('underline', false, null)"><u>U</u></button>
+              <button type="button" onclick="document.execCommand('insertUnorderedList', false, null)">• List</button>
+            </div>
+            <div class="rt-editable" id="fBody" contenteditable="true">${article ? article.body || '' : ''}</div>
           </div>
+
           <button class="editor-save" id="saveArticleBtn">Save Article</button>
           <button class="editor-cancel" id="cancelEditorBtn">Cancel</button>
         </div>
       </div>
     `;
     document.getElementById('modalRoot').innerHTML = modalHtml;
+
+    // Handle box expand toggles
+    document.querySelectorAll('.rt-maximize-btn').forEach(btn => {
+      btn.onclick = () => {
+        const targetId = btn.dataset.target;
+        const targetEl = document.getElementById(targetId);
+        if (targetEl) {
+          targetEl.classList.toggle('rt-expanded');
+          btn.textContent = targetEl.classList.contains('rt-expanded') ? 'Collapse ⤢' : 'Expand ⤢';
+        }
+      };
+    });
 
     document.getElementById('closeEditorBtn').onclick = () => document.getElementById('modalRoot').innerHTML = '';
     document.getElementById('cancelEditorBtn').onclick = () => document.getElementById('modalRoot').innerHTML = '';
@@ -957,8 +994,8 @@ const spotlightsRef = collection(db, "spotlights");
       const category = document.getElementById('eCategory').value;
       const author = document.getElementById('eAuthor').value.trim();
       const imageUrl = document.getElementById('eImageUrl').value.trim();
-      const dek = document.getElementById('eDek').value.trim();
-      const body = document.getElementById('eBody').value.trim();
+      const dek = document.getElementById('fDek').innerHTML.trim();
+      const body = document.getElementById('fBody').innerHTML.trim();
 
       if (!title || !body) {
         alert('Title and Body are required.');
