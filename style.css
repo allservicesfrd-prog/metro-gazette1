@@ -294,7 +294,6 @@ main#homePageMain {
   gap: 20px;
 }
 
-/* Desktop Grid View */
 @media (min-width: 992px) {
   .editorial-grid {
     grid-template-areas: "left center right";
@@ -626,6 +625,7 @@ main#homePageMain {
   color: #cbd5e1;
   padding-bottom: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background-color: #101b33;
 }
 
 .spotlight-item:last-child {
@@ -655,7 +655,6 @@ main#homePageMain {
   line-height: 1.25;
   overflow-wrap: anywhere;
   word-break: break-word;
-  text-wrap: balance;
 }
 
 .spotlight-blurb {
@@ -809,116 +808,71 @@ main#homePageMain {
   }
 }
 
-/* ===== Article Reader & Single Article Page ===== */
+/* ===== Full-Page Article View ===== */
 .article-page-root {
-  max-width: 840px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 38px 20px 72px;
+  padding: 32px 20px 72px;
 }
 
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(16, 27, 51, 0.65);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 40px 16px;
-  overflow-y: auto;
-  z-index: 100;
-}
-
-.modal {
-  background: var(--cream);
-  max-width: 720px;
-  width: 100%;
-  padding: 36px 36px 40px;
-  position: relative;
+.article-full-page {
+  background: #fff;
+  border-radius: 10px;
+  padding: 36px 40px;
+  box-shadow: 0 4px 20px rgba(15, 23, 42, 0.06);
   border-top: 4px solid var(--navy);
-  border-radius: 4px;
 }
 
-.modal-close {
-  position: absolute;
-  top: 14px;
-  right: 16px;
+.article-back-btn {
   background: none;
   border: none;
-  font-size: 26px;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--navy);
+  color: var(--gold-dark);
   font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 16px;
+  display: inline-block;
 }
 
-.modal h1 {
-  font-family: Georgia, Merriweather, serif;
-  font-size: clamp(26px, 4vw, 36px);
+.article-back-btn:hover {
+  text-decoration: underline;
+}
+
+.article-full-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(28px, 4.5vw, 44px);
   color: var(--ink);
-  margin: 6px 0 12px;
-  line-height: 1.1;
+  line-height: 1.12;
+  margin: 8px 0 14px;
 }
 
-.modal .modal-body {
-  font-family: Georgia, Merriweather, serif;
-  font-size: 18px;
-  line-height: 1.8;
-  color: #2a2a2a;
-}
-
-.modal .modal-dek {
-  font-size: 18px;
-  line-height: 1.5;
-  color: #475569;
-  margin: 10px 0 14px;
-  font-style: italic;
-}
-
-.modal-hero-image {
+.article-full-hero {
   width: 100%;
-  max-height: 420px;
+  max-height: 480px;
   object-fit: cover;
-  margin-bottom: 20px;
   border-radius: 8px;
+  margin-bottom: 24px;
 }
 
-.modal .modal-actions {
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--rule);
-  display: flex;
-  gap: 10px;
-  font-family: 'Inter', sans-serif;
+.article-full-dek {
+  font-family: Georgia, Merriweather, serif;
+  font-size: 20px;
+  line-height: 1.55;
+  color: #475569;
+  font-style: italic;
+  margin-bottom: 20px;
 }
 
-.modal .modal-actions button {
-  font-family: 'Inter', sans-serif;
-  font-size: 12.5px;
-  font-weight: 600;
-  padding: 8px 14px;
-  cursor: pointer;
-  border: 1px solid var(--navy);
-  background: none;
-  color: var(--navy);
-  border-radius: 4px;
+.article-full-body {
+  font-family: Georgia, Merriweather, serif;
+  font-size: 18.5px;
+  line-height: 1.8;
+  color: #1e293b;
 }
 
-.modal .modal-actions button.danger {
-  border-color: #a33;
-  color: #a33;
-}
-
-.modal .modal-actions button:hover {
-  background: var(--navy);
-  color: #fff;
-}
-
-.modal .modal-actions button.danger:hover {
-  background: #a33;
-  color: #fff;
-}
-
-/* ===== Rich Text Editor Controls & Workspaces ===== */
+/* ===== Rich Text Editor Controls ===== */
 .editor-field {
   margin-bottom: 16px;
 }
@@ -943,10 +897,6 @@ main#homePageMain {
   background: #fff;
   border-radius: 4px;
   box-sizing: border-box;
-}
-
-.editor-field select {
-  font-family: 'Inter', sans-serif;
 }
 
 .rt-toolbar {
@@ -1119,84 +1069,7 @@ footer .fname {
   color: #B7C0D6;
 }
 
-/* ===== Responsive Breakpoints ===== */
-@media (max-width: 800px) {
-  .masthead-inner {
-    display: block;
-    text-align: center;
-  }
-  .masthead-name {
-    justify-content: center;
-  }
-  .masthead-tagline {
-    margin-top: 8px;
-  }
-  .editorial-grid {
-    grid-template-columns: 1fr;
-  }
-  .right-headlines-sidebar {
-    gap: 18px;
-  }
-  .section-nav-inner {
-    overflow-x: auto;
-  }
-  .article-page-root {
-    padding-top: 28px;
-  }
-}
-
-@media (max-width: 560px) {
-  main#homePageMain {
-    padding: 22px 14px 48px;
-  }
-  .utility-bar {
-    padding: 8px 14px;
-  }
-  .masthead {
-    padding: 16px;
-  }
-  .section-nav-inner button, .section-nav-inner .nav-link {
-    padding: 13px 12px;
-  }
-  .article-card {
-    padding: 14px;
-  }
-  .ad-container:has(ins[data-ad-status="filled"]), .ad-container:has(iframe) {
-    min-height: 180px;
-  }
-}
-/* ===== Article Recommendations & Editorial Layout Safeguards ===== */
-.editorial-grid,
-.editorial-grid > *,
-.photos-grid,
-.photo-card {
-  min-width: 0;
-}
-
-.editorial-grid {
-  width: 100%;
-  max-width: 100%;
-}
-
-@media (min-width: 992px) {
-  .editorial-grid {
-    grid-template-columns: minmax(0, 240px) minmax(0, 1fr) minmax(0, 300px);
-  }
-}
-
-.business-spotlight,
-.business-spotlight .spotlight-item {
-  background-color: #101b33;
-}
-
-.business-spotlight .spotlight-name {
-  color: #ffffff !important;
-}
-
-.business-spotlight .spotlight-blurb {
-  color: #cbd5e1 !important;
-}
-
+/* ===== Article Recommendations ===== */
 .recommended-articles {
   max-width: 1200px;
   margin: 48px auto 0;
@@ -1214,10 +1087,6 @@ footer .fname {
   font: 700 clamp(24px, 3vw, 32px)/1.15 'Playfair Display', Georgia, serif;
 }
 
-.recommended-articles__grid {
-  margin: 0;
-}
-
 .recommended-article-card {
   min-height: 220px;
   text-decoration: none;
@@ -1232,5 +1101,8 @@ footer .fname {
 @media (max-width: 560px) {
   .recommended-article-card {
     min-height: 280px;
+  }
+  .article-full-page {
+    padding: 22px 18px;
   }
 }

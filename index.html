@@ -29,474 +29,7 @@
   gtag('js', new Date());
   gtag('config', 'G-2Z4XENMGKK');
 </script>
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4388033452805776"
-     crossorigin="anonymous"></script>
-<style>
-  :root{
-    --navy:#1B2A4A;
-    --navy-deep:#101B33;
-    --gold:#C9982F;
-    --gold-dark:#9C7420;
-    --cream:#FAF6EE;
-    --ink:#1A1A1A;
-    --rule:#D9D0BE;
-    --card:#FFFFFF;
-    --navy-tint:#E8ECF3;
-  }
-  *{box-sizing:border-box;}
-  body{margin:0;}
-  html{scroll-behavior:smooth;}
-  body{
-    background:var(--cream);
-    color:var(--ink);
-    font-family:'Source Serif 4', serif;
-    -webkit-font-smoothing:antialiased;
-  }
-  a{color:inherit;text-decoration:none;}
-  .sans{font-family:'Inter',sans-serif;}
-
-  /* Focus visibility */
-  a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible{
-    outline:2px solid var(--gold-dark);
-    outline-offset:2px;
-  }
-
-  @media (prefers-reduced-motion: reduce){
-    *{animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important;}
-  }
-
-  /* ===== Top utility bar ===== */
-  .utility-bar{
-    background:var(--navy-deep);
-    color:#C9D2E3;
-    font-family:'Inter',sans-serif;
-    font-size:12px;
-    letter-spacing:0.04em;
-    padding:6px 20px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    flex-wrap:wrap;
-    gap:6px;
-  }
-  .utility-bar .clock-dot{
-    display:inline-block;width:6px;height:6px;border-radius:50%;
-    background:var(--gold);margin-right:6px;
-    animation:pulse 2.4s ease-in-out infinite;
-  }
-  @keyframes pulse{
-    0%,100%{opacity:1;} 50%{opacity:0.35;}
-  }
-
-  /* ===== Masthead ===== */
-  .masthead{
-    background:var(--cream);
-    border-bottom:3px solid var(--navy);
-    padding:28px 20px 18px;
-    text-align:center;
-    position:relative;
-  }
-  .masthead-inner{
-    max-width:1100px;margin:0 auto;
-  }
-  .masthead-name{
-    font-family:'Playfair Display',serif;
-    font-weight:900;
-    font-size:clamp(36px, 7vw, 68px);
-    letter-spacing:0.01em;
-    color:var(--navy);
-    line-height:1;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:14px;
-    flex-wrap:wrap;
-  }
-  .masthead-name .accent{color:var(--gold-dark);}
-  .clock-icon{
-    width:0.78em;height:0.78em;
-    border:5px solid var(--navy);
-    border-radius:50%;
-    position:relative;
-    flex:none;
-  }
-  .clock-icon::before, .clock-icon::after{
-    content:'';
-    position:absolute;
-    background:var(--navy);
-    top:50%;left:50%;
-    transform-origin:0 0;
-  }
-  .clock-icon::before{width:26%;height:9%;transform:translate(0,-50%) rotate(-45deg);}
-  .clock-icon::after{width:34%;height:9%;transform:translate(0,-50%) rotate(75deg);}
-  .masthead-tagline{
-    font-family:'Inter',sans-serif;
-    font-style:italic;
-    font-size:14px;
-    letter-spacing:0.18em;
-    text-transform:uppercase;
-    color:var(--navy);
-    margin-top:8px;
-  }
-  .masthead-tagline .rule{
-    display:inline-block;width:34px;height:1px;background:var(--gold-dark);
-    vertical-align:middle;margin:0 10px;
-  }
-
-  /* Dateline strip - signature element */
-  .dateline{
-    background:var(--navy);
-    color:var(--cream);
-    font-family:'Inter',sans-serif;
-    font-size:12.5px;
-    padding:9px 20px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:22px;
-    flex-wrap:wrap;
-    letter-spacing:0.03em;
-    border-bottom:1px solid var(--gold);
-  }
-  .dateline b{color:var(--gold);font-weight:700;}
-
-  /* ===== Nav ===== */
-  nav.section-nav{
-    background:var(--card);
-    border-bottom:1px solid var(--rule);
-    position:sticky;top:0;z-index:20;
-  }
-  .section-nav-inner{
-    max-width:1100px;margin:0 auto;
-    display:flex;gap:0;
-    overflow-x:auto;
-    font-family:'Inter',sans-serif;
-  }
-  .section-nav-inner button{
-    background:none;border:none;cursor:pointer;
-    padding:14px 18px;
-    font-size:13px;font-weight:600;letter-spacing:0.06em;
-    text-transform:uppercase;color:var(--navy);
-    white-space:nowrap;
-    border-bottom:3px solid transparent;
-    transition:border-color .15s ease, color .15s ease, background .15s ease;
-  }
-  .section-nav-inner button:hover{background:var(--navy-tint);}
-  .section-nav-inner button.active{border-bottom-color:var(--gold-dark);color:var(--gold-dark);}
-  .section-nav-inner .spacer{flex:1;}
-  .write-btn{
-    background:var(--navy) !important;color:var(--cream) !important;
-    margin:8px 10px 8px 0 !important;
-    border-radius:2px;
-    padding:8px 16px !important;
-  }
-  .write-btn:hover{background:var(--navy-deep) !important;}
-
-  /* ===== Layout ===== */
-  main{max-width:1100px;margin:0 auto;padding:30px 20px 60px;}
-  .layout{display:grid;grid-template-columns:2fr 1fr;gap:36px;align-items:start;}
-  @media (max-width:800px){.layout{grid-template-columns:1fr;}}
-
-  .eyebrow{
-    font-family:'Inter',sans-serif;font-size:11.5px;font-weight:700;
-    letter-spacing:0.12em;text-transform:uppercase;color:var(--gold-dark);
-    margin-bottom:6px;display:block;
-  }
-
-  /* Lead story */
-  .lead-story{
-    border-bottom:2px solid var(--navy);
-    padding-bottom:28px;margin-bottom:30px;
-    cursor:pointer;
-  }
-  .lead-story h1{
-    font-family:'Playfair Display',serif;
-    font-weight:800;font-size:clamp(28px,4vw,42px);
-    line-height:1.08;color:var(--ink);margin:0 0 12px;
-  }
-  .lead-story .dek{
-    font-size:18px;line-height:1.55;color:#3a3a3a;margin:0 0 14px;
-  }
-  .byline{
-    font-family:'Inter',sans-serif;font-size:12.5px;color:#6b6b6b;
-    letter-spacing:0.02em;
-  }
-  .byline b{color:var(--navy);}
-
-  /* Article grid */
-  .grid-articles{
-    display:grid;grid-template-columns:1fr 1fr;gap:26px 30px;
-  }
-  @media (max-width:560px){.grid-articles{grid-template-columns:1fr;}}
-  .article-card{
-    border-top:3px solid var(--navy);
-    padding-top:12px;cursor:pointer;
-  }
-  .article-card h2{
-    font-family:'Playfair Display',serif;font-weight:700;
-    font-size:21px;line-height:1.2;margin:0 0 8px;color:var(--ink);
-  }
-  .article-card:hover h2{color:var(--gold-dark);}
-  .article-card p{font-size:15px;line-height:1.5;color:#444;margin:0 0 8px;}
-
-  /* Sidebar */
-  .sidebar-box{
-    background:var(--navy);color:var(--cream);
-    padding:20px;margin-bottom:24px;
-  }
-  .sidebar-box h3{
-    font-family:'Playfair Display',serif;font-size:19px;margin:0 0 14px;
-    border-bottom:1px solid var(--gold);padding-bottom:8px;
-  }
-  .sidebar-item{
-    font-size:14.5px;line-height:1.4;margin-bottom:12px;
-    padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.14);
-    cursor:pointer;
-  }
-  .sidebar-item:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
-  .sidebar-item .idx{color:var(--gold);font-family:'Inter',sans-serif;font-weight:700;margin-right:6px;}
-  .sidebar-item:hover{color:var(--gold);}
-
-  .subscribe-box{
-    border:2px solid var(--navy);padding:20px;text-align:center;
-  }
-  .subscribe-box h3{
-    font-family:'Playfair Display',serif;font-size:18px;margin:0 0 8px;color:var(--navy);
-  }
-  .subscribe-box p{font-size:13.5px;color:#555;margin:0 0 14px;font-family:'Inter',sans-serif;}
-  .subscribe-box input{
-    width:100%;padding:9px 10px;border:1px solid var(--rule);margin-bottom:8px;
-    font-family:'Inter',sans-serif;font-size:13px;
-  }
-  .subscribe-box button{
-    width:100%;padding:10px;background:var(--gold-dark);color:#fff;border:none;
-    font-family:'Inter',sans-serif;font-weight:600;font-size:13px;letter-spacing:0.05em;
-    text-transform:uppercase;cursor:pointer;
-  }
-  .subscribe-box button:hover{background:var(--navy);}
-
-  /* Empty state */
-  .empty-state{
-    text-align:center;padding:60px 20px;color:#777;
-    font-family:'Inter',sans-serif;
-  }
-  .empty-state h2{font-family:'Playfair Display',serif;color:var(--navy);margin-bottom:8px;}
-
-  /* Footer */
-  footer{
-    background:var(--navy-deep);color:#B7C0D6;
-    padding:30px 20px;text-align:center;
-    font-family:'Inter',sans-serif;font-size:12.5px;
-  }
-  footer .fname{font-family:'Playfair Display',serif;color:var(--gold);font-size:18px;display:block;margin-bottom:6px;}
-  .footer-links{margin:16px 0 10px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
-  .footer-links a{color:var(--cream);text-decoration:underline;text-underline-offset:3px;cursor:pointer;}
-  .footer-links a:hover{color:var(--gold);}
-  .footer-divider{color:var(--gold);}
-  .footer-copyright{color:#B7C0D6;}
-
-  /* ===== Modal: article reader ===== */
-  .modal-overlay{
-    position:fixed;inset:0;background:rgba(16,27,51,0.65);
-    display:flex;align-items:flex-start;justify-content:center;
-    padding:40px 16px;overflow-y:auto;z-index:100;
-  }
-  .modal{
-    background:var(--cream);max-width:720px;width:100%;
-    padding:36px 36px 40px;position:relative;
-    border-top:4px solid var(--navy);
-  }
-  .modal-close{
-    position:absolute;top:14px;right:16px;background:none;border:none;
-    font-size:26px;line-height:1;cursor:pointer;color:var(--navy);
-    font-family:'Inter',sans-serif;
-  }
-  .modal h1{
-    font-family:'Playfair Display',serif;font-size:clamp(26px,4vw,36px);
-    color:var(--ink);margin:6px 0 12px;line-height:1.1;
-  }
-  .modal .modal-body{font-size:17px;line-height:1.7;color:#2a2a2a;white-space:pre-wrap;}
-  .modal .modal-body.modal-body-html{white-space:normal;}
-  .modal .modal-dek{
-    font-size:18px;line-height:1.5;color:#3a3a3a;margin:10px 0 14px;font-style:italic;
-  }
-  .modal .modal-dek p{margin:0;}
-  .modal .modal-dek:empty{display:none;}
-
-  /* Language switcher */
-  .lang-row{
-    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-    margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--rule);
-    font-family:'Inter',sans-serif;
-  }
-  .lang-label{font-size:12px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#777;}
-  .lang-btn{
-    background:#fff;border:1px solid var(--rule);color:var(--navy);
-    font-family:'Inter',sans-serif;font-size:12px;font-weight:600;
-    padding:5px 12px;cursor:pointer;border-radius:20px;letter-spacing:0.03em;
-  }
-  .lang-btn:hover{border-color:var(--navy);}
-  .lang-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
-  .lang-status{font-size:12px;color:var(--gold-dark);display:none;font-style:italic;}
-  .home-lang-row{margin:0 0 24px;}
-  .modal .modal-actions{margin-top:24px;padding-top:16px;border-top:1px solid var(--rule);
-    display:flex;gap:10px;font-family:'Inter',sans-serif;}
-  .modal .modal-actions button{
-    font-family:'Inter',sans-serif;font-size:12.5px;font-weight:600;
-    padding:8px 14px;cursor:pointer;border:1px solid var(--navy);background:none;color:var(--navy);
-  }
-  .modal .modal-actions button.danger{border-color:#a33;color:#a33;}
-  .modal .modal-actions button:hover{background:var(--navy);color:#fff;}
-  .modal .modal-actions button.danger:hover{background:#a33;color:#fff;}
-
-  /* ===== Editor modal ===== */
-  .editor-field{margin-bottom:16px;}
-  .editor-field label{
-    display:block;font-family:'Inter',sans-serif;font-size:12px;font-weight:700;
-    letter-spacing:0.06em;text-transform:uppercase;color:var(--navy);margin-bottom:6px;
-  }
-  .editor-field input, .editor-field textarea, .editor-field select{
-    width:100%;padding:10px 12px;border:1px solid var(--rule);
-    font-family:'Source Serif 4',serif;font-size:15px;background:#fff;
-    border-radius:2px;
-  }
-  .editor-field select{font-family:'Inter',sans-serif;}
-  .editor-field textarea{resize:vertical;min-height:160px;line-height:1.5;}
-  .editor-save{
-    background:var(--gold-dark);color:#fff;border:none;padding:11px 22px;
-    font-family:'Inter',sans-serif;font-weight:700;font-size:13px;letter-spacing:0.05em;
-    text-transform:uppercase;cursor:pointer;border-radius:2px;
-  }
-  .editor-save:hover{background:var(--navy);}
-  .editor-cancel{
-    background:none;border:1px solid var(--rule);padding:11px 18px;margin-left:8px;
-    font-family:'Inter',sans-serif;font-size:13px;cursor:pointer;color:#555;border-radius:2px;
-  }
-
-  .toast{
-    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
-    background:var(--navy);color:#fff;padding:12px 22px;
-    font-family:'Inter',sans-serif;font-size:13.5px;
-    border-left:3px solid var(--gold);z-index:200;
-    box-shadow:0 6px 20px rgba(0,0,0,0.25);
-  }
-
-  .loading-row{
-    text-align:center;padding:40px;color:#999;font-family:'Inter',sans-serif;font-size:13px;
-  }
-
-  /* Password gate */
-  .gate-modal{max-width:380px;}
-  .gate-modal .lock-icon{
-    width:34px;height:34px;margin:0 auto 14px;border:3px solid var(--navy);border-radius:6px;
-    position:relative;
-  }
-  .gate-modal .lock-icon::before{
-    content:'';position:absolute;top:-16px;left:50%;transform:translateX(-50%);
-    width:18px;height:18px;border:3px solid var(--navy);border-bottom:none;
-    border-radius:10px 10px 0 0;
-  }
-  .gate-modal h1{font-size:20px;text-align:center;}
-  .gate-modal p.gate-sub{
-    font-family:'Inter',sans-serif;font-size:13px;color:#666;text-align:center;margin:0 0 20px;
-  }
-  .gate-error{
-    color:#a33;font-family:'Inter',sans-serif;font-size:12.5px;margin-top:-8px;margin-bottom:14px;display:none;
-  }
-  .unlock-status{
-    font-family:'Inter',sans-serif;font-size:11.5px;color:var(--gold);
-    display:flex;align-items:center;gap:5px;padding:8px 10px !important;
-  }
-  .unlock-status .dot-lit{width:6px;height:6px;border-radius:50%;background:var(--gold);display:inline-block;}
-
-  /* Article images */
-  .lead-image{width:100%;max-height:380px;object-fit:cover;margin-bottom:16px;display:block;}
-  .card-image{width:100%;height:150px;object-fit:cover;margin-bottom:10px;display:block;}
-  .modal-hero-image{width:100%;max-height:420px;object-fit:cover;margin-bottom:20px;display:block;}
-
-  /* Image upload field */
-  .image-upload-wrap input[type=file]{
-    font-family:'Inter',sans-serif;font-size:12.5px;padding:9px;border:1px dashed var(--rule);
-    width:100%;background:#fff;cursor:pointer;box-sizing:border-box;
-  }
-  .image-preview{max-width:100%;max-height:180px;border:1px solid var(--rule);display:block;margin-top:10px;object-fit:cover;}
-  .image-status{font-family:'Inter',sans-serif;font-size:12px;color:var(--gold-dark);margin-top:6px;}
-  .remove-image-btn{
-    background:none;border:1px solid var(--rule);padding:6px 12px;margin-top:8px;
-    font-family:'Inter',sans-serif;font-size:12px;cursor:pointer;color:#555;border-radius:2px;
-  }
-
-  /* Business Spotlight */
-  .spotlight-header{
-    display:flex;justify-content:space-between;align-items:center;
-    border-bottom:1px solid var(--gold);padding-bottom:8px;margin-bottom:14px;
-  }
-  .spotlight-header h3{margin:0;border:none;padding:0;}
-  .add-spotlight-btn{
-    background:none;border:1px solid var(--gold);color:var(--gold);
-    font-family:'Inter',sans-serif;font-size:11px;padding:4px 9px;cursor:pointer;border-radius:2px;
-    white-space:nowrap;
-  }
-  .add-spotlight-btn:hover{background:var(--gold);color:var(--navy);}
-  .spotlight-item{
-    display:flex;gap:10px;align-items:center;
-    padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.14);
-    cursor:pointer;
-  }
-  .spotlight-item:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
-  .spotlight-thumb{
-    width:44px;height:44px;flex:none;background-size:cover;background-position:center;
-    background-color:rgba(255,255,255,0.12);border-radius:3px;object-fit:cover;
-  }
-  .spotlight-info{flex:1;min-width:0;}
-  .spotlight-name{font-family:'Inter',sans-serif;font-weight:700;font-size:13.5px;color:#fff;}
-  .spotlight-blurb{
-    font-size:12px;color:#C9D2E3;overflow:hidden;text-overflow:ellipsis;
-    white-space:nowrap;font-family:'Inter',sans-serif;
-  }
-  .spotlight-edit{
-    background:none;border:none;color:var(--gold);cursor:pointer;font-size:14px;flex:none;padding:4px;
-  }
-  .spotlight-empty{
-    font-family:'Inter',sans-serif;font-size:13px;color:#C9D2E3;cursor:default;
-  }
-
-  /* Rich text editor for Deck / Body */
-  .rt-label-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
-  .rt-label-row label{margin-bottom:0;}
-  .rt-maximize-btn{
-    background:none;border:1px solid var(--rule);font-family:'Inter',sans-serif;font-size:11px;
-    padding:4px 9px;cursor:pointer;border-radius:2px;color:#555;white-space:nowrap;
-  }
-  .rt-maximize-btn:hover{background:var(--navy-tint);border-color:var(--navy);}
-  .rt-toolbar{display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap;}
-  .rt-toolbar button{
-    min-width:30px;height:28px;border:1px solid var(--rule);background:#fff;cursor:pointer;
-    font-family:'Source Serif 4',serif;font-size:13px;border-radius:2px;padding:0 8px;color:var(--ink);
-  }
-  .rt-toolbar button:hover{background:var(--navy-tint);}
-  .rt-toolbar button.rt-list-btn{font-family:'Inter',sans-serif;font-size:11px;}
-  .rt-editable{
-    border:1px solid var(--rule);padding:10px 12px;min-height:160px;max-height:160px;overflow-y:auto;
-    font-family:'Source Serif 4',serif;font-size:15px;line-height:1.55;background:#fff;border-radius:2px;
-    transition:min-height .15s ease, max-height .15s ease;
-  }
-  .rt-editable:focus{outline:2px solid var(--gold-dark);outline-offset:1px;}
-  .rt-editable:empty:before{content:attr(data-placeholder);color:#999;}
-  .rt-editable.rt-expanded{min-height:56vh;max-height:56vh;}
-  #fDek.rt-editable{min-height:64px;max-height:64px;}
-  #fDek.rt-editable.rt-expanded{min-height:32vh;max-height:32vh;}
-  .rt-editable p{margin:0 0 0.9em;}
-  .rt-editable p:last-child{margin-bottom:0;}
-  .rt-editable ul, .rt-editable ol{margin:0 0 0.9em 1.3em;padding:0;}
-  .rt-editable div{margin:0 0 0.2em;}
-
-  /* Rendered rich text on the live site */
-  .modal-body p{margin:0 0 1em;}
-  .modal-body p:last-child{margin-bottom:0;}
-  .modal-body ul, .modal-body ol{margin:0 0 1em 1.4em;padding:0;}
-  .lead-story .dek p{margin:0;}
-</style>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4388033452805776" crossorigin="anonymous"></script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -526,7 +59,7 @@
 <div class="site-container site-shell">
 <nav class="section-nav">
   <div class="section-nav-inner sans" id="sectionNav">
-    <button data-cat="All" class="active">À la une</button>
+    <button data-cat="All" class="active" id="navAllBtn">À la une</button>
     <button data-cat="Politics">Politics</button>
     <button data-cat="Culture">Culture</button>
     <button data-cat="Economy">Economy</button>
@@ -555,18 +88,16 @@
       <div id="vertical-photo-list" class="vertical-photo-list"></div>
     </aside>
     <div class="content-column center-main-feed">
-      <div class="ad-container ad-container--leaderboard" data-ad-placement="top-content" aria-label="Advertisement">
-      </div>
+      <div class="ad-container ad-container--leaderboard" data-ad-placement="top-content" aria-label="Advertisement"></div>
       <div id="leadSlot"></div>
       <div class="grid-articles" id="gridSlot"></div>
     </div>
     <aside class="sidebar-column right-headlines-sidebar">
       <div class="sidebar-box">
-        <h3>LES PLUS LUS</h3>
+        <h3 id="sidebarHeading">LES PLUS LUS</h3>
         <div id="sidebarList"></div>
       </div>
-      <div class="ad-container ad-container--sidebar" data-ad-placement="sidebar" aria-label="Advertisement">
-      </div>
+      <div class="ad-container ad-container--sidebar" data-ad-placement="sidebar" aria-label="Advertisement"></div>
       <div class="sidebar-box business-spotlight">
         <div class="spotlight-header">
           <h3>Business Spotlight</h3>
@@ -651,6 +182,14 @@ const spotlightsRef = collection(db, "spotlights");
 const CLOUDINARY_CLOUD_NAME = "kukx1d9k";
 const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
 
+const LABELS = {
+  original: { navAll: "À la une", sidebar: "LES PLUS LUS" },
+  en: { navAll: "Top Stories", sidebar: "MOST READ" },
+  fr: { navAll: "À la une", sidebar: "LES PLUS LUS" },
+  es: { navAll: "Portada", sidebar: "MÁS LEÍDOS" },
+  ht: { navAll: "Premye Paj", sidebar: "PI PLIS LI" }
+};
+
 (function() {
   const CATS = ["Politics", "Culture", "Economy", "Sport", "Local", "Business", "Sports", "Opinion", "World"];
 
@@ -708,10 +247,6 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
     return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-  function articlePath(article) {
-    return article.slug ? `/article/${encodeURIComponent(article.slug)}` : `/?article=${encodeURIComponent(article.id)}`;
-  }
-
   function slugify(value) {
     const slug = String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     return slug || 'article';
@@ -719,11 +254,16 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
 
   function createUniqueSlug(title, articleId) {
     const base = slugify(title);
-    const used = new Set(articles.filter(a => a.id !== articleId).map(a => a.slug).filter(Boolean));
+    const used = new Set(articles.filter(a => a.id !== articleId).map(a => a.slug || slugify(a.title)).filter(Boolean));
     if (!used.has(base)) return base;
     let suffix = 2;
     while (used.has(`${base}-${suffix}`)) suffix += 1;
     return `${base}-${suffix}`;
+  }
+
+  function articlePath(article) {
+    const cleanSlug = article.slug || slugify(article.title);
+    return `/article/${encodeURIComponent(cleanSlug)}`;
   }
 
   function getRouteArticleSlug() {
@@ -735,7 +275,9 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
 
   function findArticleForCurrentRoute() {
     const slug = getRouteArticleSlug();
-    if (slug) return articles.find(a => a.slug === slug) || null;
+    if (slug) {
+      return articles.find(a => (a.slug && a.slug.toLowerCase() === slug) || slugify(a.title) === slug) || null;
+    }
     const legacyId = new URLSearchParams(window.location.search).get('article');
     return legacyId ? articles.find(a => a.id === legacyId) || null : null;
   }
@@ -758,6 +300,15 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
     if (language === homeLanguage) return;
     const buttons = document.querySelectorAll('#homeLangRow .lang-btn');
     const status = document.getElementById('homeLangStatus');
+    
+    // Update Dynamic Page Labels
+    const navAllBtn = document.getElementById('navAllBtn');
+    const sidebarHeading = document.getElementById('sidebarHeading');
+    if (LABELS[language]) {
+      if (navAllBtn) navAllBtn.textContent = LABELS[language].navAll;
+      if (sidebarHeading) sidebarHeading.textContent = LABELS[language].sidebar;
+    }
+
     if (language === 'original') {
       homeLanguage = language;
       buttons.forEach(btn => btn.classList.toggle('active', btn === button));
@@ -790,7 +341,6 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
     }
   }
 
-  // Gallery Renderers
   function renderLeftGallery() {
     const container = document.getElementById('vertical-photo-list');
     if (!container) return;
@@ -806,7 +356,7 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
         <div class="thumb-wrapper">
           <img src="${item.imageUrl}" alt="${item.title}">
         </div>
-        <div class="card-caption">${item.title}</div>
+        <div class="card-caption">${localizedArticle(item).title || item.title}</div>
       </a>
     `).join('');
   }
@@ -825,7 +375,7 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
       <a href="${articlePath(item)}" class="photo-card" data-id="${item.id}">
         <img src="${item.imageUrl}" alt="${item.title}">
         <div class="photo-card__overlay"></div>
-        <div class="photo-card__title">${item.title}</div>
+        <div class="photo-card__title">${localizedArticle(item).title || item.title}</div>
       </a>
     `).join('');
   }
@@ -847,17 +397,9 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
           <div class="spotlight-name">${item.name || 'Business Spotlight'}</div>
           <div class="spotlight-blurb">${item.blurb || ''}</div>
         </div>
-        ${isUnlocked ? `<button class="spotlight-edit-btn" type="button" data-id="${item.id}" aria-label="Edit ${item.name || 'business spotlight'}">✏️</button>` : ''}
+        ${isUnlocked ? `<button class="spotlight-edit-btn" type="button" data-id="${item.id}" aria-label="Edit spotlight">✏️</button>` : ''}
       </div>
     `).join('');
-
-    list.querySelectorAll('.spotlight-item').forEach(itemEl => {
-      itemEl.addEventListener('click', event => {
-        if (event.target.closest('.spotlight-edit-btn')) return;
-        const item = spotlights.find(s => s.id === itemEl.dataset.spotlightId);
-        if (isUnlocked && item) openSpotlightEditor(item);
-      });
-    });
 
     if (isUnlocked) {
       list.querySelectorAll('.spotlight-edit-btn').forEach(btn => {
@@ -943,29 +485,33 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
     renderBottomGallery();
   }
 
+  // Full-Page Article Reader View
   function renderArticlePage(article) {
     const root = document.getElementById('articlePageRoot');
     if (!root) return;
+    const locArt = localizedArticle(article);
     const recommended = articles
       .filter(item => item.id !== article.id && item.imageUrl)
       .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
       .slice(0, 4);
+
     root.innerHTML = `
-      <article class="modal" style="margin:20px auto; max-width:800px;">
-        <button class="modal-close" id="closeArticlePageBtn">&times;</button>
+      <div class="article-full-page">
+        <button class="article-back-btn" id="closeArticlePageBtn">← Back to Headlines</button>
         <span class="eyebrow">${article.category || 'News'}</span>
-        <h1>${article.title}</h1>
-        <div class="byline" style="margin-bottom:16px;">By <b>${article.author || 'Staff'}</b> • ${fmtDate(article.date)}</div>
-        ${article.imageUrl ? `<img src="${article.imageUrl}" class="modal-hero-image" alt="${article.title}">` : ''}
-        <div class="modal-dek">${article.dek || ''}</div>
-        <div class="modal-body modal-body-html">${article.body || ''}</div>
+        <h1 class="article-full-title">${locArt.title || article.title}</h1>
+        <div class="byline" style="margin-bottom:20px;">By <b>${article.author || 'Staff'}</b> • ${fmtDate(article.date)}</div>
+        ${article.imageUrl ? `<img src="${article.imageUrl}" class="article-full-hero" alt="${article.title}">` : ''}
+        <div class="article-full-dek">${locArt.dek || article.dek || ''}</div>
+        <div class="article-full-body">${locArt.body || article.body || ''}</div>
         ${isUnlocked ? `
-          <div class="modal-actions">
+          <div class="modal-actions" style="margin-top: 32px;">
             <button id="editArticleBtn" data-id="${article.id}">Edit</button>
             <button id="deleteArticleBtn" class="danger" data-id="${article.id}">Delete</button>
           </div>
         ` : ''}
-      </article>
+      </div>
+
       ${recommended.length ? `
         <section class="recommended-articles" aria-labelledby="recommendedArticlesTitle">
           <div class="recommended-articles__header"><h2 id="recommendedArticlesTitle">Recommended Articles</h2></div>
@@ -974,7 +520,7 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
               <a href="${articlePath(item)}" class="photo-card recommended-article-card" data-recommended-id="${item.id}">
                 <img src="${item.imageUrl}" alt="${item.title}">
                 <div class="photo-card__overlay"></div>
-                <div class="photo-card__title">${item.title}</div>
+                <div class="photo-card__title">${localizedArticle(item).title || item.title}</div>
               </a>
             `).join('')}
           </div>
@@ -1027,7 +573,6 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
     }
   }
 
-  // Article Editor Modal with Rich Text Formatting & Expand
   function openEditor(article = null) {
     const modalHtml = `
       <div class="modal-overlay" id="editorOverlay">
@@ -1099,7 +644,6 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
     `;
     document.getElementById('modalRoot').innerHTML = modalHtml;
 
-    // Handle box expand toggles
     document.querySelectorAll('.rt-maximize-btn').forEach(btn => {
       btn.onclick = () => {
         const targetId = btn.dataset.target;
@@ -1159,9 +703,15 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
         return;
       }
 
+      const generatedSlug = createUniqueSlug(title, article ? article.id : null);
       const payload = {
-        title, slug: createUniqueSlug(title, article ? article.id : null),
-        category, author, imageUrl, dek, body,
+        title,
+        slug: generatedSlug,
+        category,
+        author,
+        imageUrl,
+        dek,
+        body,
         date: article ? article.date : new Date().toISOString()
       };
 
