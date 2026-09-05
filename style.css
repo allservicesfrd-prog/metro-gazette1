@@ -574,7 +574,8 @@ main#homePageMain {
 .business-spotlight {
   padding: 0;
   overflow: hidden;
-  background: var(--navy-deep, #101b33) !important;
+  background: #101b33 !important;
+  color: #cbd5e1;
   border-radius: 10px;
 }
 
@@ -621,6 +622,8 @@ main#homePageMain {
   display: flex;
   align-items: center;
   gap: 12px;
+  cursor: pointer;
+  color: #cbd5e1;
   padding-bottom: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
 }
@@ -650,6 +653,9 @@ main#homePageMain {
   font-size: 14px;
   color: #ffffff !important;
   line-height: 1.25;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-wrap: balance;
 }
 
 .spotlight-blurb {
@@ -659,6 +665,8 @@ main#homePageMain {
   line-height: 1.4;
   white-space: normal;
   overflow: visible;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .spotlight-edit-btn {

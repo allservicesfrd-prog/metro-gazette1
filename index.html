@@ -648,14 +648,29 @@ const auth = getAuth(fbApp);
 
 const articlesRef = collection(db, "articles");
 const spotlightsRef = collection(db, "spotlights");
+const CLOUDINARY_CLOUD_NAME = "kukx1d9k";
+const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
 
 (function() {
   const CATS = ["Politics", "Culture", "Economy", "Sport", "Local", "Business", "Sports", "Opinion", "World"];
-  
+
   let articles = [];
   let spotlights = [];
   let activeCat = "All";
   let isUnlocked = false;
+  let homeLanguage = "original";
+  const homeTranslations = new Map();
+
+  async function uploadToCloudinary(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
+    if (!response.ok) throw new Error('Photo upload failed');
+    const result = await response.json();
+    if (!result.secure_url) throw new Error('Photo URL missing');
+    return result.secure_url;
+  }
 
   function updateClock() {
     const el = document.getElementById('liveClock');
@@ -697,6 +712,20 @@ const spotlightsRef = collection(db, "spotlights");
     return article.slug ? `/article/${encodeURIComponent(article.slug)}` : `/?article=${encodeURIComponent(article.id)}`;
   }
 
+  function slugify(value) {
+    const slug = String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return slug || 'article';
+  }
+
+  function createUniqueSlug(title, articleId) {
+    const base = slugify(title);
+    const used = new Set(articles.filter(a => a.id !== articleId).map(a => a.slug).filter(Boolean));
+    if (!used.has(base)) return base;
+    let suffix = 2;
+    while (used.has(`${base}-${suffix}`)) suffix += 1;
+    return `${base}-${suffix}`;
+  }
+
   function getRouteArticleSlug() {
     const match = window.location.pathname.match(/^\/article\/([^/]+)\/?$/i);
     if (!match) return '';
@@ -711,12 +740,62 @@ const spotlightsRef = collection(db, "spotlights");
     return legacyId ? articles.find(a => a.id === legacyId) || null : null;
   }
 
+  function localizedArticle(article) {
+    if (homeLanguage === 'original') return article;
+    return { ...article, ...(homeTranslations.get(`${article.id}:${homeLanguage}`) || {}) };
+  }
+
+  async function translateText(text, targetLanguage) {
+    if (!text || !String(text).trim()) return '';
+    const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(String(text))}&langpair=autodetect|${targetLanguage}&de=allservicesfrd@gmail.com`);
+    const data = await response.json();
+    const translated = data?.responseData?.translatedText;
+    if (!response.ok || !translated || translated.includes('MYMEMORY WARNING')) throw new Error('Translation temporarily unavailable');
+    return translated;
+  }
+
+  async function setHomeLanguage(language, button) {
+    if (language === homeLanguage) return;
+    const buttons = document.querySelectorAll('#homeLangRow .lang-btn');
+    const status = document.getElementById('homeLangStatus');
+    if (language === 'original') {
+      homeLanguage = language;
+      buttons.forEach(btn => btn.classList.toggle('active', btn === button));
+      status.style.display = 'none';
+      renderApp();
+      return;
+    }
+    buttons.forEach(btn => { btn.disabled = true; });
+    status.style.display = 'inline';
+    status.textContent = 'Translating articles…';
+    try {
+      await Promise.all(articles.map(async article => {
+        const key = `${article.id}:${language}`;
+        if (homeTranslations.has(key)) return;
+        const [title, dek, body] = await Promise.all([
+          translateText(article.title || '', language),
+          translateText(stripHtml(article.dek || ''), language),
+          translateText(stripHtml(article.body || ''), language)
+        ]);
+        homeTranslations.set(key, { title, dek, body });
+      }));
+      homeLanguage = language;
+      buttons.forEach(btn => btn.classList.toggle('active', btn === button));
+      status.style.display = 'none';
+      renderApp();
+    } catch (error) {
+      status.textContent = 'Translation is temporarily unavailable. Please try again later.';
+    } finally {
+      buttons.forEach(btn => { btn.disabled = false; });
+    }
+  }
+
   // Gallery Renderers
   function renderLeftGallery() {
     const container = document.getElementById('vertical-photo-list');
     if (!container) return;
     const photoArticles = articles.filter(a => a.imageUrl).slice(0, 5);
-    
+
     if (photoArticles.length === 0) {
       container.innerHTML = '<div class="spotlight-empty">No photos available.</div>';
       return;
@@ -758,26 +837,34 @@ const spotlightsRef = collection(db, "spotlights");
       list.innerHTML = `<div class="spotlight-empty">No business spotlights available.</div>`;
       return;
     }
-    
+
     list.innerHTML = spotlights.map(item => `
       <div class="spotlight-item" data-spotlight-id="${item.id}">
-        ${item.imageUrl 
-          ? `<img src="${item.imageUrl}" class="spotlight-thumb" alt="${item.name}">` 
+        ${item.imageUrl
+          ? `<img src="${item.imageUrl}" class="spotlight-thumb" alt="${item.name}">`
           : `<div class="spotlight-thumb"></div>`}
         <div class="spotlight-info">
-          <div class="spotlight-name" style="color: #ffffff; font-weight: 700; font-size: 14px;">${item.name}</div>
-          <div class="spotlight-blurb" style="color: #cbd5e1; font-size: 12px; margin-top: 2px;">${item.blurb || ''}</div>
+          <div class="spotlight-name">${item.name || 'Business Spotlight'}</div>
+          <div class="spotlight-blurb">${item.blurb || ''}</div>
         </div>
-        ${isUnlocked ? `<button class="spotlight-edit-btn" data-id="${item.id}">✏️</button>` : ''}
+        ${isUnlocked ? `<button class="spotlight-edit-btn" type="button" data-id="${item.id}" aria-label="Edit ${item.name || 'business spotlight'}">✏️</button>` : ''}
       </div>
     `).join('');
+
+    list.querySelectorAll('.spotlight-item').forEach(itemEl => {
+      itemEl.addEventListener('click', event => {
+        if (event.target.closest('.spotlight-edit-btn')) return;
+        const item = spotlights.find(s => s.id === itemEl.dataset.spotlightId);
+        if (isUnlocked && item) openSpotlightEditor(item);
+      });
+    });
 
     if (isUnlocked) {
       list.querySelectorAll('.spotlight-edit-btn').forEach(btn => {
         btn.onclick = (e) => {
           e.stopPropagation();
           const item = spotlights.find(s => s.id === btn.dataset.id);
-          openSpotlightEditor(item);
+          if (item) openSpotlightEditor(item);
         };
       });
     }
@@ -817,13 +904,14 @@ const spotlightsRef = collection(db, "spotlights");
     }
 
     const lead = filtered[0];
+    const localizedLead = localizedArticle(lead);
     if (leadSlot) {
       leadSlot.innerHTML = `
         <article class="lead-story" data-id="${lead.id}">
           <span class="eyebrow">${lead.category || 'News'}</span>
           ${lead.imageUrl ? `<img src="${lead.imageUrl}" class="lead-image" alt="${lead.title}">` : ''}
-          <h1>${lead.title}</h1>
-          <div class="dek">${lead.dek || ''}</div>
+          <h1>${localizedLead.title || lead.title}</h1>
+          <div class="dek">${homeLanguage === 'original' ? (lead.dek || '') : (localizedLead.dek || lead.dek || '')}</div>
           <div class="byline">By <b>${lead.author || 'Staff'}</b> • ${fmtDate(lead.date)}</div>
         </article>
       `;
@@ -835,8 +923,8 @@ const spotlightsRef = collection(db, "spotlights");
         <article class="article-card" data-id="${item.id}">
           <span class="eyebrow">${item.category || 'News'}</span>
           ${item.imageUrl ? `<img src="${item.imageUrl}" class="card-image" alt="${item.title}">` : ''}
-          <h2>${item.title}</h2>
-          <p>${excerpt(stripHtml(item.body || ''), 110)}</p>
+          <h2>${localizedArticle(item).title || item.title}</h2>
+          <p>${excerpt(stripHtml(localizedArticle(item).dek || localizedArticle(item).body || item.body || ''), 110)}</p>
           <div class="byline">${fmtDate(item.date)}</div>
         </article>
       `).join('');
@@ -845,7 +933,7 @@ const spotlightsRef = collection(db, "spotlights");
     if (sidebarList) {
       sidebarList.innerHTML = articles.slice(0, 5).map((item, idx) => `
         <div class="sidebar-item" data-id="${item.id}">
-          <span class="idx">${idx + 1}.</span> ${item.title}
+          <span class="idx">${idx + 1}.</span> ${localizedArticle(item).title || item.title}
         </div>
       `).join('');
     }
@@ -917,7 +1005,7 @@ const spotlightsRef = collection(db, "spotlights");
         <div class="modal" style="max-width: 800px;">
           <button class="modal-close" id="closeEditorBtn">&times;</button>
           <h2>${article ? 'Edit Article' : 'New Article'}</h2>
-          
+
           <div class="editor-field">
             <label>Title</label>
             <input type="text" id="eTitle" value="${article ? article.title || '' : ''}">
@@ -938,6 +1026,14 @@ const spotlightsRef = collection(db, "spotlights");
           <div class="editor-field">
             <label>Image URL</label>
             <input type="url" id="eImageUrl" placeholder="https://..." value="${article ? article.imageUrl || '' : ''}">
+          </div>
+
+          <div class="editor-field image-upload-wrap">
+            <label for="eImageFile">Upload Article Photo</label>
+            <input type="file" id="eImageFile" accept="image/*">
+            <div id="imageUploadStatus" class="image-status" aria-live="polite"></div>
+            <img id="imageUploadPreview" class="image-preview" src="${article && article.imageUrl ? article.imageUrl : ''}" alt="" style="${article && article.imageUrl ? '' : 'display:none;'}">
+            <button type="button" id="removeUploadedImageBtn" class="remove-image-btn" style="${article && article.imageUrl ? '' : 'display:none;'}">Remove photo</button>
           </div>
 
           <div class="editor-field">
@@ -986,6 +1082,38 @@ const spotlightsRef = collection(db, "spotlights");
       };
     });
 
+    let pendingImageUrl = article ? article.imageUrl || '' : '';
+    const imageFileInput = document.getElementById('eImageFile');
+    const imagePreview = document.getElementById('imageUploadPreview');
+    const imageStatus = document.getElementById('imageUploadStatus');
+    const removeImageButton = document.getElementById('removeUploadedImageBtn');
+
+    imageFileInput.addEventListener('change', async () => {
+      const file = imageFileInput.files[0];
+      if (!file) return;
+      imageStatus.textContent = 'Uploading photo…';
+      try {
+        pendingImageUrl = await uploadToCloudinary(file);
+        imagePreview.src = pendingImageUrl;
+        imagePreview.style.display = 'block';
+        removeImageButton.style.display = 'inline-block';
+        document.getElementById('eImageUrl').value = pendingImageUrl;
+        imageStatus.textContent = 'Photo uploaded.';
+      } catch (error) {
+        imageStatus.textContent = 'Photo upload failed. Please try again.';
+      }
+    });
+
+    removeImageButton.addEventListener('click', () => {
+      pendingImageUrl = '';
+      imageFileInput.value = '';
+      imagePreview.removeAttribute('src');
+      imagePreview.style.display = 'none';
+      removeImageButton.style.display = 'none';
+      document.getElementById('eImageUrl').value = '';
+      imageStatus.textContent = '';
+    });
+
     document.getElementById('closeEditorBtn').onclick = () => document.getElementById('modalRoot').innerHTML = '';
     document.getElementById('cancelEditorBtn').onclick = () => document.getElementById('modalRoot').innerHTML = '';
 
@@ -993,7 +1121,7 @@ const spotlightsRef = collection(db, "spotlights");
       const title = document.getElementById('eTitle').value.trim();
       const category = document.getElementById('eCategory').value;
       const author = document.getElementById('eAuthor').value.trim();
-      const imageUrl = document.getElementById('eImageUrl').value.trim();
+      const imageUrl = pendingImageUrl || document.getElementById('eImageUrl').value.trim();
       const dek = document.getElementById('fDek').innerHTML.trim();
       const body = document.getElementById('fBody').innerHTML.trim();
 
@@ -1003,7 +1131,8 @@ const spotlightsRef = collection(db, "spotlights");
       }
 
       const payload = {
-        title, category, author, imageUrl, dek, body,
+        title, slug: createUniqueSlug(title, article ? article.id : null),
+        category, author, imageUrl, dek, body,
         date: article ? article.date : new Date().toISOString()
       };
 
@@ -1105,7 +1234,15 @@ const spotlightsRef = collection(db, "spotlights");
     renderApp();
   });
 
+  if (new URLSearchParams(window.location.search).get('editor') === 'login') {
+    window.setTimeout(() => requireUnlock(() => openEditor()), 0);
+  }
+
   document.getElementById('writeBtn')?.addEventListener('click', () => requireUnlock(() => openEditor()));
+  document.querySelectorAll('#homeLangRow .lang-btn').forEach(button => {
+    button.addEventListener('click', () => setHomeLanguage(button.dataset.lang, button));
+  });
+
   document.getElementById('addSpotlightBtn')?.addEventListener('click', () => requireUnlock(() => openSpotlightEditor()));
 
   document.getElementById('sectionNav')?.addEventListener('click', e => {
