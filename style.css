@@ -1165,3 +1165,72 @@ footer .fname {
     min-height: 180px;
   }
 }
+/* ===== Article Recommendations & Editorial Layout Safeguards ===== */
+.editorial-grid,
+.editorial-grid > *,
+.photos-grid,
+.photo-card {
+  min-width: 0;
+}
+
+.editorial-grid {
+  width: 100%;
+  max-width: 100%;
+}
+
+@media (min-width: 992px) {
+  .editorial-grid {
+    grid-template-columns: minmax(0, 240px) minmax(0, 1fr) minmax(0, 300px);
+  }
+}
+
+.business-spotlight,
+.business-spotlight .spotlight-item {
+  background-color: #101b33;
+}
+
+.business-spotlight .spotlight-name {
+  color: #ffffff !important;
+}
+
+.business-spotlight .spotlight-blurb {
+  color: #cbd5e1 !important;
+}
+
+.recommended-articles {
+  max-width: 1200px;
+  margin: 48px auto 0;
+  padding-top: 28px;
+  border-top: 1px solid #d8dee9;
+}
+
+.recommended-articles__header {
+  margin-bottom: 16px;
+}
+
+.recommended-articles__header h2 {
+  margin: 0;
+  color: #101b33;
+  font: 700 clamp(24px, 3vw, 32px)/1.15 'Playfair Display', Georgia, serif;
+}
+
+.recommended-articles__grid {
+  margin: 0;
+}
+
+.recommended-article-card {
+  min-height: 220px;
+  text-decoration: none;
+}
+
+@media (max-width: 900px) {
+  .recommended-article-card {
+    min-height: 250px;
+  }
+}
+
+@media (max-width: 560px) {
+  .recommended-article-card {
+    min-height: 280px;
+  }
+}

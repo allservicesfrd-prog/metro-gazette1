@@ -946,6 +946,10 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
   function renderArticlePage(article) {
     const root = document.getElementById('articlePageRoot');
     if (!root) return;
+    const recommended = articles
+      .filter(item => item.id !== article.id && item.imageUrl)
+      .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+      .slice(0, 4);
     root.innerHTML = `
       <article class="modal" style="margin:20px auto; max-width:800px;">
         <button class="modal-close" id="closeArticlePageBtn">&times;</button>
@@ -962,6 +966,20 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
           </div>
         ` : ''}
       </article>
+      ${recommended.length ? `
+        <section class="recommended-articles" aria-labelledby="recommendedArticlesTitle">
+          <div class="recommended-articles__header"><h2 id="recommendedArticlesTitle">Recommended Articles</h2></div>
+          <div class="photos-grid recommended-articles__grid">
+            ${recommended.map(item => `
+              <a href="${articlePath(item)}" class="photo-card recommended-article-card" data-recommended-id="${item.id}">
+                <img src="${item.imageUrl}" alt="${item.title}">
+                <div class="photo-card__overlay"></div>
+                <div class="photo-card__title">${item.title}</div>
+              </a>
+            `).join('')}
+          </div>
+        </section>
+      ` : ''}
     `;
 
     document.getElementById('closeArticlePageBtn')?.addEventListener('click', () => {
@@ -978,6 +996,17 @@ const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
         window.history.pushState({}, '', '/');
         renderApp();
       }
+    });
+
+    root.querySelectorAll('[data-recommended-id]').forEach(card => {
+      card.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        const nextArticle = articles.find(item => item.id === card.dataset.recommendedId);
+        if (!nextArticle) return;
+        window.history.pushState({}, '', articlePath(nextArticle));
+        renderApp();
+      });
     });
   }
 
