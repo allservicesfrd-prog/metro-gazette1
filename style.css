@@ -1117,3 +1117,163 @@ footer .fname {
     padding: 22px 18px;
   }
 }
+/* ===== Production fixes: modal, admin controls, and Spotlight banner ===== */
+#modalRoot {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  pointer-events: auto;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.75);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.modal {
+  background: #ffffff;
+  border-radius: 12px;
+  max-width: 750px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+  padding: 30px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  border: 0;
+  background: transparent;
+  color: #334155;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.logout-btn {
+  background: #b91c1c !important;
+  border: 0 !important;
+  border-radius: 6px;
+  color: #ffffff !important;
+  padding: 8px 13px !important;
+  margin: 8px 8px 8px 0 !important;
+  font: 700 12px/1 Inter, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.logout-btn:hover {
+  background: #991b1b !important;
+}
+
+.business-spotlight {
+  background: #101b33 !important;
+  overflow: hidden;
+}
+
+#spotlightList {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.spotlight-item {
+  display: block !important;
+  width: 100%;
+  padding: 0 !important;
+  overflow: hidden;
+  background: #101b33 !important;
+  border: 1px solid rgba(203, 213, 225, 0.22) !important;
+  border-radius: 8px;
+}
+
+.spotlight-item:last-child {
+  padding-bottom: 0 !important;
+}
+
+.spotlight-media {
+  position: relative;
+  width: 100%;
+  min-height: 120px;
+  background: #17233f;
+}
+
+.spotlight-thumb {
+  display: block;
+  width: 100% !important;
+  height: auto !important;
+  max-height: 180px;
+  min-height: 120px;
+  margin: 0;
+  border-radius: 0 !important;
+  object-fit: cover;
+}
+
+.spotlight-thumb--placeholder {
+  height: 140px !important;
+  min-height: 140px;
+  background: linear-gradient(135deg, #1e3a5f, #101b33);
+}
+
+.spotlight-info {
+  display: block;
+  min-width: 0 !important;
+  padding: 14px 15px 16px;
+}
+
+.spotlight-name {
+  margin: 0;
+  color: #ffffff !important;
+  font: 700 17px/1.25 Inter, system-ui, sans-serif !important;
+}
+
+.spotlight-blurb {
+  margin: 7px 0 0;
+  color: #cbd5e1 !important;
+  font: 400 13px/1.5 Inter, system-ui, sans-serif !important;
+  overflow-wrap: anywhere;
+  white-space: normal !important;
+}
+
+.spotlight-edit-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
+  background: rgba(16, 27, 51, 0.92) !important;
+  border: 1px solid rgba(255, 255, 255, 0.7) !important;
+  border-radius: 999px;
+  color: #ffffff !important;
+  padding: 6px 9px;
+  font: 700 11px/1 Inter, system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.spotlight-edit-btn:hover {
+  background: #ffffff !important;
+  color: #101b33 !important;
+}
+
+@media (max-width: 600px) {
+  .modal-overlay {
+    padding: 12px;
+  }
+
+  .modal {
+    max-height: 92vh;
+    padding: 24px 18px;
+  }
+}
