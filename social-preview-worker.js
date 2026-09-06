@@ -11,7 +11,7 @@
  */
 
 const SOCIAL_BOTS = /facebookexternalhit|facebot|twitterbot|whatsapp|linkedinbot|slackbot|discordbot|telegrambot|pinterestbot|googlebot/i;
-const DEFAULT_IMAGE = 'https://metrogazette.net/metro-gazette-social.jpg';
+const DEFAULT_IMAGE = 'https://metrogazette.net/metro-gazette-social.png';
 const DEFAULT_DESCRIPTION = 'Metro-Gazette delivers timely, accurate reporting from the Dominican Republic, the Caribbean, and around the world.';
 
 export default {
