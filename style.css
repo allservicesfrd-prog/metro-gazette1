@@ -1387,3 +1387,41 @@ footer .fname {
 .editor-list-item span { margin-top: 4px; color: #64748b; font-size: 12px; }
 .editor-list-item button { margin-left: 6px; padding: 7px 9px; border: 1px solid #aebbd0; border-radius: 4px; background: #ffffff; color: #101b33; cursor: pointer; font: 700 11px/1 Inter, system-ui, sans-serif; }
 @media (max-width: 700px) { .masthead { padding: 7px 14px; } .masthead-inner { min-height: 58px; gap: 10px; } .masthead-logo { width: min(300px, 67vw); max-height: 68px; } .language-menu-button { padding: 8px; } #languageMenuLabel { display: none; } .utility-bar { padding: 6px 14px; font-size: 11px; } .dateline { padding: 7px 14px; font-size: 11px; } .section-nav-inner button, .section-nav-inner .nav-link { padding: 11px 12px; font-size: 12px; } main#homePageMain { padding: 18px 14px 42px; } .editorial-grid { gap: 16px; margin-top: 12px; } .lead-story h1 { font-size: clamp(28px, 9vw, 38px); } .lead-story .dek { font-size: 16px; } .article-card { padding: 14px; } .article-full-page, .editor-auth-card, .editor-panel, .dashboard-welcome { padding: 22px 18px; } .editor-two-columns { grid-template-columns: 1fr; gap: 0; } .editor-list-item { align-items: flex-start; flex-direction: column; gap: 10px; } }
+/* ===== French-first horizontal language selector ===== */
+.language-control--inline {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.language-control--inline .lang-btn {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #101b33;
+  font: 700 12px/1 Inter, system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.language-control--inline .lang-btn:hover,
+.language-control--inline .lang-btn.active {
+  border-color: #b88624;
+  background: #101b33;
+  color: #ffffff;
+}
+
+.language-control--inline .lang-btn:disabled { opacity: .65; cursor: wait; }
+.language-control--inline .lang-status { position: static; width: auto; padding: 0; background: transparent; color: #475569; font-size: 11px; }
+
+@media (max-width: 700px) {
+  .masthead-inner { flex-wrap: wrap; justify-content: center; }
+  .masthead-inner .logo-link { width: 100%; text-align: center; }
+  .masthead-logo { width: min(340px, 90vw); }
+  .language-control--inline { width: 100%; justify-content: center; gap: 5px; }
+  .language-control--inline .lang-btn { padding: 8px 7px; font-size: 11px; }
+}
