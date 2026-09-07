@@ -1425,3 +1425,17 @@ footer .fname {
   .language-control--inline { width: 100%; justify-content: center; gap: 5px; }
   .language-control--inline .lang-btn { padding: 8px 7px; font-size: 11px; }
 }
+/* ===== Stored article translations and rich-text editor ===== */
+.language-control--inline .lang-btn { padding: 7px 6px; }
+.language-control--inline .lang-divider { color: #94a3b8; font: 700 13px/1 Inter, system-ui, sans-serif; }
+.translation-status { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.translation-status span { padding: 5px 8px; border-radius: 999px; background: #edf3eb; color: #21643c; font: 600 11px/1 Inter, system-ui, sans-serif; }
+.article-full-body h2, .article-full-body h3 { margin: 1.5em 0 .6em; color: #101b33; font-family: 'Playfair Display', Georgia, serif; }
+.article-full-body blockquote { margin: 1.4em 0; padding: 4px 0 4px 18px; border-left: 4px solid #b88624; color: #475569; font-style: italic; }
+.article-full-body a { color: #174d99; text-decoration: underline; }
+.rich-editor-label { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; }.rich-editor-label label { margin: 0 !important; }
+.rich-editor-shell { border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; overflow: hidden; }.rich-toolbar { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px; border-bottom: 1px solid #dce3ef; background: #f8fafc; }.rich-toolbar button { min-height: 30px; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 4px; background: #fff; color: #101b33; font: 700 12px/1 Inter,system-ui,sans-serif; cursor:pointer; }.rich-toolbar input { width:180px; min-height:30px; padding:5px 7px; border:1px solid #cbd5e1; border-radius:4px; font:12px/1 Inter,system-ui,sans-serif; }
+.rich-editor { min-height: 540px; padding: 18px; outline: 0; overflow: auto; color: #1e293b; font: 18px/1.75 Georgia,Merriweather,serif; }.rich-editor:empty::before { content:attr(data-placeholder); color:#94a3b8; }.rich-editor h2,.rich-editor h3{font-family:'Playfair Display',Georgia,serif;}.rich-editor blockquote{padding-left:18px;border-left:4px solid #b88624;color:#475569;font-style:italic;}.rich-editor--fullscreen { position:fixed; inset:12px; z-index:100000; display:flex; flex-direction:column; border-radius:10px; box-shadow:0 24px 70px rgba(15,23,42,.35); }.rich-editor--fullscreen .rich-editor{flex:1;min-height:0;}.editor-action-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}.editor-action-row .editor-primary-button{width:auto;margin-top:18px;}
+@media(max-width:700px){.rich-editor{min-height:400px;padding:14px;font-size:17px;}.rich-toolbar input{width:130px;}.rich-editor--fullscreen{inset:0;border-radius:0;}}
+.article-figure { margin: 0 0 24px; }
+.article-figure figcaption { margin-top: 7px; color: #64748b; font: 400 13px/1.4 Inter, system-ui, sans-serif; }
