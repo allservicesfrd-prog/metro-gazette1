@@ -30,7 +30,7 @@
   gtag('config', 'G-2Z4XENMGKK');
 </script>
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4388033452805776" crossorigin="anonymous"></script>
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=20260907-3">
 </head>
 <body>
 
@@ -46,9 +46,9 @@
       <img class="masthead-logo" src="metro-gazette-social.png" alt="Metro Gazette — News That Matters">
     </a>
     <div class="language-control language-control--inline" id="homeLangRow" aria-label="Language selector">
-      <button class="lang-btn active" type="button" data-lang="fr">Fr🇫🇷</button><span class="lang-divider" aria-hidden="true">|</span>
-      <button class="lang-btn" type="button" data-lang="en">En🇺🇸</button><span class="lang-divider" aria-hidden="true">|</span>
-      <button class="lang-btn" type="button" data-lang="es">Es🇪🇸</button>
+      <button class="lang-btn active" type="button" data-lang="fr">Fr <img class="lang-flag" src="France flag emogi.png" alt="France"></button><span class="lang-divider" aria-hidden="true">|</span>
+      <button class="lang-btn" type="button" data-lang="en">En <img class="lang-flag" src="US flag emogi.png" alt="United States"></button><span class="lang-divider" aria-hidden="true">|</span>
+      <button class="lang-btn" type="button" data-lang="es">Es <img class="lang-flag" src="Spain flag emogi.png" alt="Spain"></button>
       <span class="lang-status" id="homeLangStatus" aria-live="polite"></span>
     </div>
   </div>
@@ -84,7 +84,6 @@
     <div class="content-column center-main-feed">
       <div class="ad-container ad-container--leaderboard" data-ad-placement="top-content" aria-label="Advertisement"></div>
       <div id="leadSlot"></div>
-      <div class="grid-articles" id="gridSlot"></div>
     </div>
     <aside class="sidebar-column right-headlines-sidebar">
       <div class="sidebar-box">
@@ -118,6 +117,7 @@
       </div>
     </aside>
   </div>
+  <div id="gridSlot" class="homepage-category-sections"></div>
   <section class="photos-gallery-section" aria-labelledby="photosTitle">
     <div class="gallery-header">
       <h2 id="photosTitle" class="gallery-title">PHOTOS</h2>
@@ -490,8 +490,11 @@ const LABELS = {
     }
 
     const lead = filtered[0];
-    const secondaryStories = filtered.slice(1, 4);
-    const gridItems = filtered.slice(4);
+    const olderStories = filtered.slice(1);
+    const continuationCount = Math.min(4, olderStories.length);
+    const continuationStories = olderStories.slice(0, continuationCount);
+    const categoryGridStories = olderStories.slice(continuationCount);
+    const labels = LABELS[homeLanguage] || LABELS.fr;
     const localizedLead = localizedArticle(lead);
     if (leadSlot) {
       leadSlot.innerHTML = `
@@ -502,35 +505,46 @@ const LABELS = {
               <span class="eyebrow">${lead.category || 'News'}</span>
               <h1>${localizedLead.title || lead.title}</h1>
               <div class="dek">${homeLanguage === 'fr' ? (lead.dek || '') : (localizedLead.dek || lead.dek || '')}</div>
-              <div class="byline">${(LABELS[homeLanguage] || LABELS.fr).by || 'Par'} <b>${lead.author || 'Staff'}</b> • ${fmtDate(lead.date)}</div>
+              <div class="byline">${labels.by || 'Par'} <b>${lead.author || 'Staff'}</b> • ${fmtDate(lead.date)}</div>
             </div>
           </article>
-          ${secondaryStories.length ? `<div class="secondary-stories">${secondaryStories.map(item => {
-            const localized = localizedArticle(item);
-            return `<article class="secondary-story" data-id="${item.id}">
-              ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${localized.title || item.title}">` : ''}
-              <div><span class="eyebrow">${item.category || 'News'}</span><h2>${localized.title || item.title}</h2><div class="byline">${fmtDate(item.date)}</div></div>
-            </article>`;
-          }).join('')}</div>` : ''}
-        </section>
-      `;
+          ${continuationStories.length ? `<section class="hero-continuation" aria-label="Latest stories">
+            <div class="story-grid-heading"><span></span><h2>${labels.sidebar}</h2></div>
+            <div class="hero-continuation__grid">${continuationStories.map(item => {
+              const localized = localizedArticle(item);
+              return `<article class="article-card" data-id="${item.id}">
+                ${item.imageUrl ? `<img src="${item.imageUrl}" class="card-image" alt="${localized.title || item.title}">` : ''}
+                <span class="eyebrow">${item.category || 'News'}</span>
+                <h2>${localized.title || item.title}</h2>
+                <p>${excerpt(stripHtml(localized.dek || localized.body || item.body || ''), 130)}</p>
+                <div class="byline">${fmtDate(item.date)}</div>
+              </article>`;
+            }).join('')}</div>
+          </section>` : ''}
+        </section>      `;
     }
 
     if (gridSlot) {
-      gridSlot.innerHTML = gridItems.length ? `
-        <section class="story-grid-section" aria-label="More stories">
-          <div class="story-grid-heading"><span></span><h2>${(LABELS[homeLanguage] || LABELS.fr).sidebar}</h2></div>
-          <div class="grid-articles">${gridItems.map(item => {
+      const availableCategories = [...new Set(categoryGridStories.map(item => item.category || 'News'))];
+      const categoryOrder = [...CATS.filter(category => availableCategories.includes(category)), ...availableCategories.filter(category => !CATS.includes(category))];
+      gridSlot.innerHTML = categoryOrder.map(category => {
+        const categoryStories = categoryGridStories.filter(item => (item.category || 'News') === category);
+        const categoryTitle = labels.nav?.[category] || category;
+        const gridSizeClass = categoryStories.length === 1 ? 'grid-articles--one' : categoryStories.length === 2 ? 'grid-articles--two' : 'grid-articles--three-plus';
+        return `<section class="story-grid-section category-story-section" aria-label="${categoryTitle}">
+          <div class="story-grid-heading"><span></span><h2>${categoryTitle}</h2></div>
+          <div class="grid-articles ${gridSizeClass}">${categoryStories.map(item => {
             const localized = localizedArticle(item);
             return `<article class="article-card" data-id="${item.id}">
               ${item.imageUrl ? `<img src="${item.imageUrl}" class="card-image" alt="${localized.title || item.title}">` : ''}
               <span class="eyebrow">${item.category || 'News'}</span>
               <h2>${localized.title || item.title}</h2>
-              <p>${excerpt(stripHtml(localized.dek || localized.body || item.body || ''), 130)}</p>
+              <p>${excerpt(stripHtml(localized.dek || localized.body || item.body || ''), 140)}</p>
               <div class="byline">${fmtDate(item.date)}</div>
             </article>`;
           }).join('')}</div>
-        </section>` : '';
+        </section>`;
+      }).join('');
     }
     if (sidebarList) {
       sidebarList.innerHTML = articles.slice(0, 5).map((item, idx) => `
