@@ -178,9 +178,9 @@ const CLOUDINARY_CLOUD_NAME = "kukx1d9k";
 const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
 
 const LABELS = {
-  fr: { sidebar: "LES PLUS LUS", photos: "PHOTOS", morePhotos: "Plus de photos ›", about: "À propos", by: "Par", spotlight: "Business Spotlight", follow: "Suivez-nous", subscribe: "Recevez l'édition du matin", subscribeText: "Les titres Metro Gazette, directement dans votre boîte mail.", subscribeButton: "S'abonner", back: "← Retour aux titres", recommended: "Articles recommandés", nav: { All: "À la une", Politics: "Politique", Culture: "Culture", Economy: "Économie", Sport: "Sports" } },
-  en: { sidebar: "MOST READ", photos: "PHOTOS", morePhotos: "More Photos ›", about: "About Us", by: "By", spotlight: "Business Spotlight", follow: "Follow Us", subscribe: "Get the Morning Edition", subscribeText: "Metro Gazette headlines, straight to your inbox.", subscribeButton: "Subscribe", back: "← Back to Headlines", recommended: "Recommended Articles", nav: { All: "Top Stories", Politics: "Politics", Culture: "Culture", Economy: "Economy", Sport: "Sports" } },
-  es: { sidebar: "MÁS LEÍDOS", photos: "FOTOS", morePhotos: "Más fotos ›", about: "Sobre nosotros", by: "Por", spotlight: "Noticias de negocios", follow: "Síguenos", subscribe: "Recibe la edición matutina", subscribeText: "Titulares de Metro Gazette, directamente en tu correo.", subscribeButton: "Suscribirse", back: "← Volver a los titulares", recommended: "Artículos recomendados", nav: { All: "Portada", Politics: "Política", Culture: "Cultura", Economy: "Economía", Sport: "Deportes" } }
+  fr: { sidebar: "DERNIÈRES NOUVELLES", photos: "PHOTOS", morePhotos: "Plus de photos ›", about: "À propos", by: "Par", spotlight: "Business Spotlight", follow: "Suivez-nous", subscribe: "Recevez l'édition du matin", subscribeText: "Les titres Metro Gazette, directement dans votre boîte mail.", subscribeButton: "S'abonner", back: "← Retour aux titres", recommended: "Articles recommandés", nav: { All: "À la une", Politics: "Politique", Culture: "Culture", Economy: "Économie", Sport: "Sports" } },
+  en: { sidebar: "LATEST", photos: "PHOTOS", morePhotos: "More Photos ›", about: "About Us", by: "By", spotlight: "Business Spotlight", follow: "Follow Us", subscribe: "Get the Morning Edition", subscribeText: "Metro Gazette headlines, straight to your inbox.", subscribeButton: "Subscribe", back: "← Back to Headlines", recommended: "Recommended Articles", nav: { All: "Top Stories", Politics: "Politics", Culture: "Culture", Economy: "Economy", Sport: "Sports" } },
+  es: { sidebar: "ÚLTIMAS NOTICIAS", photos: "FOTOS", morePhotos: "Más fotos ›", about: "Sobre nosotros", by: "Por", spotlight: "Noticias de negocios", follow: "Síguenos", subscribe: "Recibe la edición matutina", subscribeText: "Titulares de Metro Gazette, directamente en tu correo.", subscribeButton: "Suscribirse", back: "← Volver a los titulares", recommended: "Artículos recomendados", nav: { All: "Portada", Politics: "Política", Culture: "Cultura", Economy: "Economía", Sport: "Deportes" } }
 };
 
 (function() {
@@ -490,32 +490,48 @@ const LABELS = {
     }
 
     const lead = filtered[0];
+    const secondaryStories = filtered.slice(1, 4);
+    const gridItems = filtered.slice(4);
     const localizedLead = localizedArticle(lead);
     if (leadSlot) {
       leadSlot.innerHTML = `
-        <article class="lead-story" data-id="${lead.id}">
-          <span class="eyebrow">${lead.category || 'News'}</span>
-          ${lead.imageUrl ? `<img src="${lead.imageUrl}" class="lead-image" alt="${localizedLead.title || lead.title}">` : ''}
-          <h1>${localizedLead.title || lead.title}</h1>
-          <div class="dek">${homeLanguage === 'fr' ? (lead.dek || '') : (localizedLead.dek || lead.dek || '')}</div>
-          <div class="byline">${(LABELS[homeLanguage] || LABELS.fr).by || 'Par'} <b>${lead.author || 'Staff'}</b> • ${fmtDate(lead.date)}</div>
-        </article>
+        <section class="top-news-composition" aria-label="Top news">
+          <article class="lead-story" data-id="${lead.id}">
+            ${lead.imageUrl ? `<div class="lead-media"><img src="${lead.imageUrl}" class="lead-image" alt="${localizedLead.title || lead.title}"></div>` : ''}
+            <div class="lead-copy">
+              <span class="eyebrow">${lead.category || 'News'}</span>
+              <h1>${localizedLead.title || lead.title}</h1>
+              <div class="dek">${homeLanguage === 'fr' ? (lead.dek || '') : (localizedLead.dek || lead.dek || '')}</div>
+              <div class="byline">${(LABELS[homeLanguage] || LABELS.fr).by || 'Par'} <b>${lead.author || 'Staff'}</b> • ${fmtDate(lead.date)}</div>
+            </div>
+          </article>
+          ${secondaryStories.length ? `<div class="secondary-stories">${secondaryStories.map(item => {
+            const localized = localizedArticle(item);
+            return `<article class="secondary-story" data-id="${item.id}">
+              ${item.imageUrl ? `<img src="${item.imageUrl}" alt="${localized.title || item.title}">` : ''}
+              <div><span class="eyebrow">${item.category || 'News'}</span><h2>${localized.title || item.title}</h2><div class="byline">${fmtDate(item.date)}</div></div>
+            </article>`;
+          }).join('')}</div>` : ''}
+        </section>
       `;
     }
 
     if (gridSlot) {
-      const gridItems = filtered.slice(1);
-      gridSlot.innerHTML = gridItems.map(item => `
-        <article class="article-card" data-id="${item.id}">
-          <span class="eyebrow">${item.category || 'News'}</span>
-          ${item.imageUrl ? `<img src="${item.imageUrl}" class="card-image" alt="${localizedArticle(item).title || item.title}">` : ''}
-          <h2>${localizedArticle(item).title || item.title}</h2>
-          <p>${excerpt(stripHtml(localizedArticle(item).dek || localizedArticle(item).body || item.body || ''), 110)}</p>
-          <div class="byline">${fmtDate(item.date)}</div>
-        </article>
-      `).join('');
+      gridSlot.innerHTML = gridItems.length ? `
+        <section class="story-grid-section" aria-label="More stories">
+          <div class="story-grid-heading"><span></span><h2>${(LABELS[homeLanguage] || LABELS.fr).sidebar}</h2></div>
+          <div class="grid-articles">${gridItems.map(item => {
+            const localized = localizedArticle(item);
+            return `<article class="article-card" data-id="${item.id}">
+              ${item.imageUrl ? `<img src="${item.imageUrl}" class="card-image" alt="${localized.title || item.title}">` : ''}
+              <span class="eyebrow">${item.category || 'News'}</span>
+              <h2>${localized.title || item.title}</h2>
+              <p>${excerpt(stripHtml(localized.dek || localized.body || item.body || ''), 130)}</p>
+              <div class="byline">${fmtDate(item.date)}</div>
+            </article>`;
+          }).join('')}</div>
+        </section>` : '';
     }
-
     if (sidebarList) {
       sidebarList.innerHTML = articles.slice(0, 5).map((item, idx) => `
         <div class="sidebar-item" data-id="${item.id}">
@@ -563,6 +579,7 @@ const LABELS = {
               <a href="${articlePath(item)}" class="photo-card recommended-article-card" data-recommended-id="${item.id}">
                 <img src="${item.imageUrl}" alt="${localizedArticle(item).title || item.title}">
                 <div class="photo-card__overlay"></div>
+                <div class="photo-card__meta">${item.category || 'News'} · ${fmtDate(item.date)}</div>
                 <div class="photo-card__title">${localizedArticle(item).title || item.title}</div>
               </a>
             `).join('')}
