@@ -1494,3 +1494,72 @@ footer { margin-top: 0; padding-top: 32px; padding-bottom: 30px; }
 @media (max-width: 991px) { .top-news-composition { grid-template-columns: minmax(0, 1fr); } .secondary-stories { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }.secondary-story { display: block; padding: 0; border: 0; }.secondary-story img { width: 100%; height: 150px; margin-bottom: 8px; }.grid-articles { grid-template-columns: repeat(3, minmax(0, 1fr)); }.left-gallery-sidebar { border: 0; padding: 0; } }
 @media (max-width: 700px) { .masthead { padding: 6px 14px; }.masthead-inner { min-height: auto; gap: 8px; }.masthead-logo { width: min(300px, 88vw); max-height: 62px; }.language-control--inline { justify-content: center; width: 100%; gap: 4px; }.language-control--inline .lang-btn { min-width: 44px; padding: 7px 6px; font-size: 12px; }.language-control--inline .lang-status { width: 100%; text-align: center; font-size: 10px; }.section-nav-inner { scrollbar-width: none; }.section-nav-inner::-webkit-scrollbar { display: none; }.section-nav-inner button, .section-nav-inner .nav-link { padding: 11px 12px; font-size: 11px; }.write-btn, .logout-btn { margin: 7px 4px !important; padding: 8px 10px !important; } main#homePageMain { padding: 18px 14px 46px; }.editorial-grid { gap: 22px; }.top-news-composition { gap: 18px; padding-bottom: 20px; }.center-main-feed .lead-image, .lead-image { height: 240px; }.lead-copy { padding-top: 11px; }.lead-story h1 { max-width: none; font-size: clamp(29px, 8.8vw, 38px); line-height: 1.08; }.lead-story .dek { font-size: 16px; }.secondary-stories, .grid-articles { grid-template-columns: 1fr; gap: 14px; }.secondary-story { display: grid; grid-template-columns: 112px minmax(0,1fr); gap: 11px; padding-bottom: 14px; border-bottom: 1px solid #dbe2ea; }.secondary-story img { width: 112px; height: 82px; margin: 0; }.secondary-story h2 { font-size: 18px; }.article-card { display: grid; grid-template-columns: 122px minmax(0,1fr); column-gap: 12px; padding-bottom: 14px; border-bottom: 1px solid #dbe2ea; }.article-card .card-image { grid-row: span 4; width: 122px; height: 92px; margin: 0; }.article-card .eyebrow { margin: 1px 0 4px; }.article-card h2 { font-size: 19px; margin-bottom: 5px; }.article-card p { display: none; }.story-grid-section { padding-top: 22px; }.article-page-root { padding: 24px 16px 56px; }.article-full-title { max-width: none; font-size: clamp(31px, 9vw, 41px); }.article-full-dek { font-size: 18px; }.article-full-body { font-size: 17px; line-height: 1.76; }.recommended-articles { margin-top: 38px; }.recommended-articles__grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }.recommended-article-card { min-height: 150px; }.article-back-btn { margin-bottom: 12px; } }
 @media (max-width: 360px) { .masthead-logo { width: 270px; }.language-control--inline .lang-btn { min-width: 41px; padding: 7px 4px; font-size: 11px; }.center-main-feed .lead-image, .lead-image { height: 215px; }.lead-story h1 { font-size: 29px; }.article-card { grid-template-columns: 105px minmax(0,1fr); }.article-card .card-image { width:105px; height:82px; } }
+/* ===== Public editorial scale and readability refinement ===== */
+/* Keep the editorial hierarchy, but reserve enough physical width for each column. */
+@media (min-width: 701px) {
+  .masthead { padding: 11px 28px; }
+  .masthead-inner { width: min(100%, 1280px); min-height: 96px; margin: 0 auto; }
+  .masthead-logo { width: min(520px, 52vw); max-height: 104px; }
+  .language-control--inline { gap: 7px; }
+  .language-control--inline .lang-btn { min-width: 54px; padding: 9px 10px; font-size: 14px; }
+  .language-control--inline .lang-divider { height: 30px; font-size: 15px; }
+  .section-nav-inner { width: min(100%, 1280px); max-width: 1280px; box-sizing: border-box; }
+  .section-nav-inner button, .section-nav-inner .nav-link { padding: 14px 16px; font-size: 14px; }
+  main#homePageMain { width: min(100%, 1280px); max-width: 1280px; box-sizing: border-box; padding: 34px 28px 78px; }
+  .editorial-grid { gap: 24px; }
+  .top-news-composition { gap: 24px; padding-bottom: 32px; }
+  .center-main-feed .lead-image, .lead-image { height: 410px; }
+  .lead-copy { padding-top: 18px; }
+  .lead-story h1 { max-width: 18ch; font-size: clamp(36px, 3.15vw, 50px); line-height: 1.08; }
+  .lead-story .dek { font-size: 18px; line-height: 1.55; }
+  .eyebrow { font-size: 11px; }
+  .secondary-stories { gap: 18px; }
+  .secondary-story { grid-template-columns: 124px minmax(0, 1fr); gap: 14px; padding-bottom: 18px; }
+  .secondary-story img { width: 124px; height: 92px; }
+  .secondary-story .eyebrow { font-size: 10px; }
+  .secondary-story h2 { font-size: 20px; line-height: 1.18; }
+  .story-grid-section { padding-top: 34px; }
+  .story-grid-heading h2 { font-size: 18px; }
+  .grid-articles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 24px; }
+  .card-image { height: 190px; margin-bottom: 13px; }
+  .article-card h2 { font-size: 22px; line-height: 1.2; }
+  .article-card p { font-size: 15.5px; line-height: 1.52; }
+  .byline { font-size: 12px; }
+  .vertical-photo-card .card-caption { font-size: 13px; line-height: 1.32; }
+  .sidebar-box h3, .subscribe-box h3 { font-size: 15px; }
+  .sidebar-item { padding: 14px 0; font-size: 16px; line-height: 1.34; }
+  .sidebar-item .idx { font-size: 13px; }
+}
+
+/* A three-column shell needs more room than a small laptop can provide. */
+@media (min-width: 1200px) {
+  .editorial-grid {
+    grid-template-areas: "left center right";
+    grid-template-columns: 190px minmax(0, 1fr) 290px;
+  }
+  .left-gallery-sidebar { padding-right: 16px; }
+  .right-headlines-sidebar { padding-left: 16px; }
+  .top-news-composition { grid-template-columns: minmax(0, 1.25fr) minmax(280px, .9fr); }
+}
+
+/* At laptop widths, retain the news/sidebar relationship and move photos below it. */
+@media (min-width: 992px) and (max-width: 1199px) {
+  .editorial-grid {
+    grid-template-areas: "center right" "left left";
+    grid-template-columns: minmax(0, 1fr) 290px;
+  }
+  .left-gallery-sidebar { border: 0; padding: 28px 0 0; }
+  .right-headlines-sidebar { padding-left: 16px; }
+  .top-news-composition { grid-template-columns: minmax(0, 1fr); }
+  .secondary-stories { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+  .secondary-story { grid-template-columns: 112px minmax(0, 1fr); }
+}
+
+/* Give the transitional single-column layout real card widths instead of shrinking them. */
+@media (min-width: 701px) and (max-width: 991px) {
+  main#homePageMain { padding-right: 24px; padding-left: 24px; }
+  .top-news-composition { grid-template-columns: minmax(0, 1fr); }
+  .secondary-stories { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+  .secondary-story { grid-template-columns: 120px minmax(0, 1fr); }
+  .grid-articles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
