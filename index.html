@@ -192,6 +192,12 @@ const LABELS = {
   let activeCat = "All";
   let isUnlocked = false;
   let homeLanguage = "fr";
+  const homepageMetadata = {
+    title: document.title,
+    description: document.getElementById('metaDescription')?.content || '',
+    image: document.getElementById('ogImage')?.content || '',
+    imageAlt: document.getElementById('ogImageAlt')?.content || ''
+  };
 
 
   async function uploadToCloudinary(file) {
@@ -325,6 +331,47 @@ const LABELS = {
   function articlePath(article) {
     const cleanSlug = article.slug || slugify(article.title);
     return `/article/${encodeURIComponent(cleanSlug)}`;
+  }
+
+  function setMetadataAttribute(id, attribute, value) {
+    const element = document.getElementById(id);
+    if (element) element.setAttribute(attribute, value);
+  }
+
+  function updatePageMetadata(article) {
+    if (!article) {
+      document.title = homepageMetadata.title;
+      setMetadataAttribute('canonicalUrl', 'href', 'https://metrogazette.net/');
+      setMetadataAttribute('metaDescription', 'content', homepageMetadata.description);
+      setMetadataAttribute('ogTitle', 'content', homepageMetadata.title);
+      setMetadataAttribute('ogDescription', 'content', homepageMetadata.description);
+      setMetadataAttribute('ogImage', 'content', homepageMetadata.image);
+      setMetadataAttribute('ogImageAlt', 'content', homepageMetadata.imageAlt);
+      setMetadataAttribute('ogUrl', 'content', 'https://metrogazette.net/');
+      setMetadataAttribute('twitterTitle', 'content', homepageMetadata.title);
+      setMetadataAttribute('twitterDescription', 'content', homepageMetadata.description);
+      setMetadataAttribute('twitterImage', 'content', homepageMetadata.image);
+      setMetadataAttribute('twitterImageAlt', 'content', homepageMetadata.imageAlt);
+      return;
+    }
+
+    const canonicalUrl = `https://metrogazette.net${articlePath(article)}`;
+    const title = article.title || homepageMetadata.title;
+    const description = excerpt(stripHtml(article.dek || article.body || homepageMetadata.description), 200);
+    const image = article.imageUrl || homepageMetadata.image;
+
+    document.title = title;
+    setMetadataAttribute('canonicalUrl', 'href', canonicalUrl);
+    setMetadataAttribute('metaDescription', 'content', description);
+    setMetadataAttribute('ogTitle', 'content', title);
+    setMetadataAttribute('ogDescription', 'content', description);
+    setMetadataAttribute('ogImage', 'content', image);
+    setMetadataAttribute('ogImageAlt', 'content', title);
+    setMetadataAttribute('ogUrl', 'content', canonicalUrl);
+    setMetadataAttribute('twitterTitle', 'content', title);
+    setMetadataAttribute('twitterDescription', 'content', description);
+    setMetadataAttribute('twitterImage', 'content', image);
+    setMetadataAttribute('twitterImageAlt', 'content', title);
   }
 
   function getRouteArticleSlug() {
@@ -469,6 +516,7 @@ const LABELS = {
     if (layoutRoot) layoutRoot.style.display = 'grid';
 
     const routeArticle = findArticleForCurrentRoute();
+    updatePageMetadata(routeArticle);
     if (routeArticle) {
       document.getElementById('homePageMain').hidden = true;
       document.getElementById('articlePageRoot').hidden = false;
