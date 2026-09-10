@@ -346,7 +346,8 @@ const LABELS = {
     if (language === 'fr') return null;
     const translation = article.translations?.[language];
     if (!translation || translation.status !== 'translated') return null;
-    if (article.sourceHash && translation.sourceHash && translation.sourceHash !== article.sourceHash) return null;
+    if (article.translationStatus?.[language] === 'outdated') return null;
+    if (!article.sourceHash || translation.sourceHash !== article.sourceHash) return null;
     return translation;
   }
 
