@@ -62,11 +62,11 @@
 <nav class="section-nav">
   <div class="section-nav-inner sans" id="sectionNav">
     <button data-cat="All" class="active" id="navAllBtn">À la une</button>
-    <button data-cat="Politics">Politics</button>
+    <button data-cat="Politique">Politique</button>
     <button data-cat="Sécurité">Sécurité</button>
     <button data-cat="Culture">Culture</button>
-    <button data-cat="Economy">Economy</button>
-    <button data-cat="Sport">Sport</button>
+    <button data-cat="Économie">Économie</button>
+    <button data-cat="Sports">Sports</button>
     <a href="/about-us.html" class="nav-link" id="aboutNavLink">À propos</a>
     <div class="spacer"></div>
     <button class="logout-btn" id="logoutBtn" type="button" style="display:none;">Logout</button>
@@ -179,13 +179,13 @@ const CLOUDINARY_CLOUD_NAME = "kukx1d9k";
 const CLOUDINARY_UPLOAD_PRESET = "pldyopph";
 
 const LABELS = {
-  fr: { sidebar: "DERNIÈRES NOUVELLES", photos: "PHOTOS", morePhotos: "Plus de photos ›", about: "À propos", by: "Par", spotlight: "Business Spotlight", follow: "Suivez-nous", subscribe: "Recevez l'édition du matin", subscribeText: "Les titres Metro Gazette, directement dans votre boîte mail.", subscribeButton: "S'abonner", back: "← Retour aux titres", recommended: "Articles recommandés", nav: { All: "À la une", Politics: "Politique", Sécurité: "Sécurité", Culture: "Culture", Economy: "Économie", Sport: "Sports" } },
-  en: { sidebar: "LATEST", photos: "PHOTOS", morePhotos: "More Photos ›", about: "About Us", by: "By", spotlight: "Business Spotlight", follow: "Follow Us", subscribe: "Get the Morning Edition", subscribeText: "Metro Gazette headlines, straight to your inbox.", subscribeButton: "Subscribe", back: "← Back to Headlines", recommended: "Recommended Articles", nav: { All: "Top Stories", Politics: "Politics", Sécurité: "Security", Culture: "Culture", Economy: "Economy", Sport: "Sports" } },
-  es: { sidebar: "ÚLTIMAS NOTICIAS", photos: "FOTOS", morePhotos: "Más fotos ›", about: "Sobre nosotros", by: "Por", spotlight: "Noticias de negocios", follow: "Síguenos", subscribe: "Recibe la edición matutina", subscribeText: "Titulares de Metro Gazette, directamente en tu correo.", subscribeButton: "Suscribirse", back: "← Volver a los titulares", recommended: "Artículos recomendados", nav: { All: "Portada", Politics: "Política", Sécurité: "Seguridad", Culture: "Cultura", Economy: "Economía", Sport: "Deportes" } }
+  fr: { sidebar: "DERNIÈRES NOUVELLES", photos: "PHOTOS", morePhotos: "Plus de photos ›", about: "À propos", by: "Par", spotlight: "Business Spotlight", follow: "Suivez-nous", subscribe: "Recevez l'édition du matin", subscribeText: "Les titres Metro Gazette, directement dans votre boîte mail.", subscribeButton: "S'abonner", back: "← Retour aux titres", recommended: "Articles recommandés", nav: { All: "À la une", Politique: "Politique", Sécurité: "Sécurité", Éducation: "Éducation", Culture: "Culture", Économie: "Économie", Sports: "Sports", Société: "Société", International: "International", Opinion: "Opinion" } },
+  en: { sidebar: "LATEST", photos: "PHOTOS", morePhotos: "More Photos ›", about: "About Us", by: "By", spotlight: "Business Spotlight", follow: "Follow Us", subscribe: "Get the Morning Edition", subscribeText: "Metro Gazette headlines, straight to your inbox.", subscribeButton: "Subscribe", back: "← Back to Headlines", recommended: "Recommended Articles", nav: { All: "Top Stories", Politique: "Politics", Sécurité: "Security", Éducation: "Education", Culture: "Culture", Économie: "Economy", Sports: "Sports", Société: "Society", International: "International", Opinion: "Opinion" } },
+  es: { sidebar: "ÚLTIMAS NOTICIAS", photos: "FOTOS", morePhotos: "Más fotos ›", about: "Sobre nosotros", by: "Por", spotlight: "Noticias de negocios", follow: "Síguenos", subscribe: "Recibe la edición matutina", subscribeText: "Titulares de Metro Gazette, directamente en tu correo.", subscribeButton: "Suscribirse", back: "← Volver a los titulares", recommended: "Artículos recomendados", nav: { All: "Portada", Politique: "Política", Sécurité: "Seguridad", Éducation: "Educación", Culture: "Cultura", Économie: "Economía", Sports: "Deportes", Société: "Sociedad", International: "Internacional", Opinion: "Opinión" } }
 };
 
 (function() {
-  const CATS = ["Politics", "Sécurité", "Culture", "Economy", "Sport", "Local", "Business", "Sports", "Opinion", "World"];
+  const CATS = ["Politique", "Sécurité", "Éducation", "Culture", "Économie", "Sports", "Société", "International", "Opinion"];
 
   let articles = [];
   let spotlights = [];
