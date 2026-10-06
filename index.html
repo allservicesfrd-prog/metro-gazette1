@@ -190,6 +190,19 @@ const LABELS = {
 
   let articles = [];
   let spotlights = [];
+  let articlesState = 'loading';
+  let spotlightsState = 'loading';
+  let articlesLoadedOnce = false;
+  let spotlightsLoadedOnce = false;
+  let articlesUnsubscribe = null;
+  let spotlightsUnsubscribe = null;
+  let articleRetryCount = 0;
+  let spotlightRetryCount = 0;
+  let articleRetryTimer = null;
+  let spotlightRetryTimer = null;
+  let articleListenerGeneration = 0;
+  let spotlightListenerGeneration = 0;
+  const MAX_PUBLIC_DATA_RETRIES = 3;
   let activeCat = "All";
   let isUnlocked = false;
   let homeLanguage = "fr";
@@ -436,6 +449,10 @@ const LABELS = {
   function renderLeftGallery() {
     const container = document.getElementById('vertical-photo-list');
     if (!container) return;
+    if (articlesState === 'loading' && !articlesLoadedOnce) {
+      container.innerHTML = '';
+      return;
+    }
     const photoArticles = articles.filter(a => a.imageUrl).slice(0, 5);
 
     if (photoArticles.length === 0) {
@@ -456,6 +473,10 @@ const LABELS = {
   function renderBottomGallery() {
     const container = document.getElementById('photos-grid');
     if (!container) return;
+    if (articlesState === 'loading' && !articlesLoadedOnce) {
+      container.innerHTML = '';
+      return;
+    }
     const photoArticles = articles.filter(a => a.imageUrl).slice(0, 4);
 
     if (photoArticles.length === 0) {
@@ -475,6 +496,15 @@ const LABELS = {
   function renderSpotlights() {
     const list = document.getElementById('spotlightList');
     if (!list) return;
+    if (spotlightsState === 'loading' && !spotlightsLoadedOnce) {
+      list.innerHTML = `<div class="spotlight-empty">Loading business spotlights…</div>`;
+      return;
+    }
+    if (spotlightsState === 'error' && !spotlightsLoadedOnce) {
+      list.innerHTML = `<div class="spotlight-empty">Business Spotlights are temporarily unavailable. <button type="button" id="retrySpotlightsBtn">Retry</button></div>`;
+      document.getElementById('retrySpotlightsBtn')?.addEventListener('click', () => startSpotlightsListener(true));
+      return;
+    }
     if (!spotlights || spotlights.length === 0) {
       list.innerHTML = `<div class="spotlight-empty">No business spotlights available.</div>`;
       return;
@@ -512,6 +542,35 @@ const LABELS = {
     const leadSlot = document.getElementById('leadSlot');
     const gridSlot = document.getElementById('gridSlot');
     const sidebarList = document.getElementById('sidebarList');
+    const homePageMain = document.getElementById('homePageMain');
+    const articlePageRoot = document.getElementById('articlePageRoot');
+
+    if (articlesState === 'loading' && !articlesLoadedOnce) {
+      if (loadingRow) {
+        loadingRow.textContent = 'Loading the presses…';
+        loadingRow.style.display = 'block';
+      }
+      if (layoutRoot) layoutRoot.style.display = 'none';
+      if (homePageMain) homePageMain.hidden = false;
+      if (articlePageRoot) articlePageRoot.hidden = true;
+      return;
+    }
+
+    if (articlesState === 'error' && !articlesLoadedOnce) {
+      if (loadingRow) loadingRow.style.display = 'none';
+      if (layoutRoot) layoutRoot.style.display = 'grid';
+      if (homePageMain) homePageMain.hidden = false;
+      if (articlePageRoot) articlePageRoot.hidden = true;
+      updatePageMetadata(null);
+      if (leadSlot) leadSlot.innerHTML = `<div class="empty-state"><h2>Unable to load the latest news right now.</h2><p>Please check your connection and try again.</p><button type="button" id="retryArticlesBtn">Retry</button></div>`;
+      if (gridSlot) gridSlot.innerHTML = '';
+      if (sidebarList) sidebarList.innerHTML = '';
+      document.getElementById('vertical-photo-list')?.replaceChildren();
+      document.getElementById('photos-grid')?.replaceChildren();
+      renderSpotlights();
+      document.getElementById('retryArticlesBtn')?.addEventListener('click', () => startArticlesListener(true));
+      return;
+    }
 
     if (loadingRow) loadingRow.style.display = 'none';
     if (layoutRoot) layoutRoot.style.display = 'grid';
@@ -900,15 +959,102 @@ const LABELS = {
     }
   }
 
-  onSnapshot(query(articlesRef, orderBy("date", "desc")), snapshot => {
-    articles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    renderApp();
-  });
+  function clearArticlesRetryTimer() {
+    if (articleRetryTimer) {
+      clearTimeout(articleRetryTimer);
+      articleRetryTimer = null;
+    }
+  }
 
-  onSnapshot(spotlightsRef, snapshot => {
-    spotlights = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  function clearSpotlightsRetryTimer() {
+    if (spotlightRetryTimer) {
+      clearTimeout(spotlightRetryTimer);
+      spotlightRetryTimer = null;
+    }
+  }
+
+  function startArticlesListener(resetRetries = false) {
+    if (resetRetries) articleRetryCount = 0;
+    clearArticlesRetryTimer();
+    if (articlesUnsubscribe) {
+      articlesUnsubscribe();
+      articlesUnsubscribe = null;
+    }
+    articlesState = 'loading';
+    renderApp();
+    const generation = ++articleListenerGeneration;
+    articlesUnsubscribe = onSnapshot(query(articlesRef, orderBy("date", "desc")), snapshot => {
+      if (generation !== articleListenerGeneration) return;
+      articles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      articlesState = 'ready';
+      articlesLoadedOnce = true;
+      articleRetryCount = 0;
+      clearArticlesRetryTimer();
+      renderApp();
+    }, () => {
+      if (generation !== articleListenerGeneration) return;
+      if (articlesUnsubscribe) {
+        articlesUnsubscribe();
+        articlesUnsubscribe = null;
+      }
+      if (articleRetryCount < MAX_PUBLIC_DATA_RETRIES) {
+        const delay = 1000 * (2 ** articleRetryCount);
+        articleRetryCount += 1;
+        articlesState = 'loading';
+        renderApp();
+        articleRetryTimer = window.setTimeout(() => {
+          articleRetryTimer = null;
+          startArticlesListener(false);
+        }, delay);
+      } else {
+        articlesState = 'error';
+        renderApp();
+      }
+    });
+  }
+
+  function startSpotlightsListener(resetRetries = false) {
+    if (resetRetries) spotlightRetryCount = 0;
+    clearSpotlightsRetryTimer();
+    if (spotlightsUnsubscribe) {
+      spotlightsUnsubscribe();
+      spotlightsUnsubscribe = null;
+    }
+    spotlightsState = 'loading';
     renderSpotlights();
-  });
+    const generation = ++spotlightListenerGeneration;
+    spotlightsUnsubscribe = onSnapshot(spotlightsRef, snapshot => {
+      if (generation !== spotlightListenerGeneration) return;
+      spotlights = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      spotlightsState = 'ready';
+      spotlightsLoadedOnce = true;
+      spotlightRetryCount = 0;
+      clearSpotlightsRetryTimer();
+      renderSpotlights();
+    }, () => {
+      if (generation !== spotlightListenerGeneration) return;
+      if (spotlightsUnsubscribe) {
+        spotlightsUnsubscribe();
+        spotlightsUnsubscribe = null;
+      }
+      if (spotlightRetryCount < MAX_PUBLIC_DATA_RETRIES) {
+        const delay = 1000 * (2 ** spotlightRetryCount);
+        spotlightRetryCount += 1;
+        spotlightsState = 'loading';
+        renderSpotlights();
+        spotlightRetryTimer = window.setTimeout(() => {
+          spotlightRetryTimer = null;
+          startSpotlightsListener(false);
+        }, delay);
+      } else {
+        spotlightsState = 'error';
+        renderSpotlights();
+      }
+    });
+  }
+
+  startArticlesListener(true);
+  startSpotlightsListener(true);
 
   onAuthStateChanged(auth, user => {
     isUnlocked = Boolean(user && !user.isAnonymous);
