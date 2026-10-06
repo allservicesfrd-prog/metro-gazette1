@@ -196,13 +196,9 @@ const LABELS = {
   let spotlightsLoadedOnce = false;
   let articlesUnsubscribe = null;
   let spotlightsUnsubscribe = null;
-  let articleRetryCount = 0;
-  let spotlightRetryCount = 0;
-  let articleRetryTimer = null;
-  let spotlightRetryTimer = null;
-  let articleListenerGeneration = 0;
-  let spotlightListenerGeneration = 0;
-  const MAX_PUBLIC_DATA_RETRIES = 3;
+  let articlesWatchdogTimer = null;
+  let spotlightsWatchdogTimer = null;
+  const INITIAL_DATA_WATCHDOG_MS = 12000;
   let activeCat = "All";
   let isUnlocked = false;
   let homeLanguage = "fr";
@@ -502,7 +498,7 @@ const LABELS = {
     }
     if (spotlightsState === 'error' && !spotlightsLoadedOnce) {
       list.innerHTML = `<div class="spotlight-empty">Business Spotlights are temporarily unavailable. <button type="button" id="retrySpotlightsBtn">Retry</button></div>`;
-      document.getElementById('retrySpotlightsBtn')?.addEventListener('click', () => startSpotlightsListener(true));
+      document.getElementById('retrySpotlightsBtn')?.addEventListener('click', () => startSpotlightsListener());
       return;
     }
     if (!spotlights || spotlights.length === 0) {
@@ -568,7 +564,7 @@ const LABELS = {
       document.getElementById('vertical-photo-list')?.replaceChildren();
       document.getElementById('photos-grid')?.replaceChildren();
       renderSpotlights();
-      document.getElementById('retryArticlesBtn')?.addEventListener('click', () => startArticlesListener(true));
+      document.getElementById('retryArticlesBtn')?.addEventListener('click', () => startArticlesListener());
       return;
     }
 
@@ -959,102 +955,82 @@ const LABELS = {
     }
   }
 
-  function clearArticlesRetryTimer() {
-    if (articleRetryTimer) {
-      clearTimeout(articleRetryTimer);
-      articleRetryTimer = null;
+  function clearArticlesWatchdog() {
+    if (articlesWatchdogTimer) {
+      clearTimeout(articlesWatchdogTimer);
+      articlesWatchdogTimer = null;
     }
   }
 
-  function clearSpotlightsRetryTimer() {
-    if (spotlightRetryTimer) {
-      clearTimeout(spotlightRetryTimer);
-      spotlightRetryTimer = null;
+  function clearSpotlightsWatchdog() {
+    if (spotlightsWatchdogTimer) {
+      clearTimeout(spotlightsWatchdogTimer);
+      spotlightsWatchdogTimer = null;
     }
   }
 
-  function startArticlesListener(resetRetries = false) {
-    if (resetRetries) articleRetryCount = 0;
-    clearArticlesRetryTimer();
+  function startArticlesListener() {
+    clearArticlesWatchdog();
     if (articlesUnsubscribe) {
       articlesUnsubscribe();
       articlesUnsubscribe = null;
     }
     articlesState = 'loading';
     renderApp();
-    const generation = ++articleListenerGeneration;
+    articlesWatchdogTimer = window.setTimeout(() => {
+      if (!articlesLoadedOnce && articlesState === 'loading') {
+        articlesState = 'error';
+        renderApp();
+      }
+    }, INITIAL_DATA_WATCHDOG_MS);
     articlesUnsubscribe = onSnapshot(query(articlesRef, orderBy("date", "desc")), snapshot => {
-      if (generation !== articleListenerGeneration) return;
+      clearArticlesWatchdog();
       articles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       articlesState = 'ready';
       articlesLoadedOnce = true;
-      articleRetryCount = 0;
-      clearArticlesRetryTimer();
       renderApp();
-    }, () => {
-      if (generation !== articleListenerGeneration) return;
-      if (articlesUnsubscribe) {
-        articlesUnsubscribe();
-        articlesUnsubscribe = null;
-      }
-      if (articleRetryCount < MAX_PUBLIC_DATA_RETRIES) {
-        const delay = 1000 * (2 ** articleRetryCount);
-        articleRetryCount += 1;
-        articlesState = 'loading';
-        renderApp();
-        articleRetryTimer = window.setTimeout(() => {
-          articleRetryTimer = null;
-          startArticlesListener(false);
-        }, delay);
-      } else {
+    }, error => {
+      clearArticlesWatchdog();
+      console.error('Firestore articles listener error:', error);
+      if (!articlesLoadedOnce) {
         articlesState = 'error';
         renderApp();
       }
     });
   }
 
-  function startSpotlightsListener(resetRetries = false) {
-    if (resetRetries) spotlightRetryCount = 0;
-    clearSpotlightsRetryTimer();
+  function startSpotlightsListener() {
+    clearSpotlightsWatchdog();
     if (spotlightsUnsubscribe) {
       spotlightsUnsubscribe();
       spotlightsUnsubscribe = null;
     }
     spotlightsState = 'loading';
     renderSpotlights();
-    const generation = ++spotlightListenerGeneration;
+    spotlightsWatchdogTimer = window.setTimeout(() => {
+      if (!spotlightsLoadedOnce && spotlightsState === 'loading') {
+        spotlightsState = 'error';
+        renderSpotlights();
+      }
+    }, INITIAL_DATA_WATCHDOG_MS);
     spotlightsUnsubscribe = onSnapshot(spotlightsRef, snapshot => {
-      if (generation !== spotlightListenerGeneration) return;
+      clearSpotlightsWatchdog();
       spotlights = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       spotlightsState = 'ready';
       spotlightsLoadedOnce = true;
-      spotlightRetryCount = 0;
-      clearSpotlightsRetryTimer();
       renderSpotlights();
-    }, () => {
-      if (generation !== spotlightListenerGeneration) return;
-      if (spotlightsUnsubscribe) {
-        spotlightsUnsubscribe();
-        spotlightsUnsubscribe = null;
-      }
-      if (spotlightRetryCount < MAX_PUBLIC_DATA_RETRIES) {
-        const delay = 1000 * (2 ** spotlightRetryCount);
-        spotlightRetryCount += 1;
-        spotlightsState = 'loading';
-        renderSpotlights();
-        spotlightRetryTimer = window.setTimeout(() => {
-          spotlightRetryTimer = null;
-          startSpotlightsListener(false);
-        }, delay);
-      } else {
+    }, error => {
+      clearSpotlightsWatchdog();
+      console.error('Firestore spotlights listener error:', error);
+      if (!spotlightsLoadedOnce) {
         spotlightsState = 'error';
         renderSpotlights();
       }
     });
   }
 
-  startArticlesListener(true);
-  startSpotlightsListener(true);
+  startArticlesListener();
+  startSpotlightsListener();
 
   onAuthStateChanged(auth, user => {
     isUnlocked = Boolean(user && !user.isAnonymous);
