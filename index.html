@@ -665,6 +665,36 @@ const LABELS = {
     renderBottomGallery();
   }
 
+  function insertAdsterraNativeBanner(root) {
+    const articleBody = root.querySelector('.article-full-body');
+    if (!articleBody || articleBody.querySelector('#container-e2d8f1479fa0e701e04b7c9f1eafcf7d')) return;
+
+    const paragraphs = [...articleBody.querySelectorAll('p')].filter(paragraph => paragraph.textContent.trim());
+    const anchorIndex = paragraphs.length >= 4
+      ? 3
+      : Math.max(0, Math.ceil(paragraphs.length / 2) - 1);
+    const anchor = paragraphs[anchorIndex];
+    const placement = document.createElement('section');
+    placement.setAttribute('aria-label', 'Publicité');
+    placement.style.cssText = 'max-width:100%;min-width:0;overflow:hidden;margin:28px 0;box-sizing:border-box;';
+
+    const label = document.createElement('div');
+    label.textContent = 'PUBLICITÉ';
+    label.style.cssText = 'font-family:Inter,Arial,sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.08em;color:#64748b;margin:0 0 8px;text-transform:uppercase;';
+
+    const container = document.createElement('div');
+    container.id = 'container-e2d8f1479fa0e701e04b7c9f1eafcf7d';
+    container.style.cssText = 'max-width:100%;min-width:0;overflow:hidden;';
+
+    const script = document.createElement('script');
+    script.setAttribute('async', 'async');
+    script.setAttribute('data-cfasync', 'false');
+    script.src = 'https://bauval.org/21/e2d8f1479fa0e701e04b7c9f1eafcf7d';
+
+    placement.append(label, container, script);
+    if (anchor) anchor.insertAdjacentElement('afterend', placement);
+    else articleBody.append(placement);
+  }
   function renderArticlePage(article) {
     const root = document.getElementById('articlePageRoot');
     if (!root) return;
@@ -707,6 +737,8 @@ const LABELS = {
         </section>
       ` : ''}
     `;
+
+    insertAdsterraNativeBanner(root);
 
     document.getElementById('closeArticlePageBtn')?.addEventListener('click', () => {
       window.history.pushState({}, '', '/');
