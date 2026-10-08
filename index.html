@@ -193,8 +193,20 @@ const LABELS = {
       maxPositions: 3,
       units: Object.freeze([
         Object.freeze({
+          id: 'adsterra-native-after-paragraph-3',
+          type: 'native',
           containerId: 'container-e2d8f1479fa0e701e04b7c9f1eafcf7d',
           scriptSrc: 'https://bauval.org/21/e2d8f1479fa0e701e04b7c9f1eafcf7d'
+        }),
+        Object.freeze({
+          id: 'adsterra-300x250-after-paragraph-6',
+          type: 'iframe',
+          key: '666926ef7831fd62451a0e9207095176',
+          format: 'iframe',
+          height: 250,
+          width: 300,
+          params: Object.freeze({}),
+          scriptSrc: 'https://bauval.org/22/666926ef7831fd62451a0e9207095176'
         })
       ])
     }),
@@ -704,6 +716,7 @@ const LABELS = {
   function createAdsterraNativePlacement(unit) {
     const placement = document.createElement('section');
     placement.setAttribute('aria-label', 'Publicité');
+    placement.dataset.adUnit = unit.id;
     placement.style.cssText = 'max-width:100%;min-width:0;overflow:hidden;margin:28px 0;box-sizing:border-box;';
 
     const container = document.createElement('div');
@@ -717,6 +730,35 @@ const LABELS = {
 
     placement.append(createAdLabel(), container, script);
     return placement;
+  }
+
+  function createAdsterraRectanglePlacement(unit) {
+    const placement = document.createElement('section');
+    placement.setAttribute('aria-label', 'Publicité');
+    placement.dataset.adUnit = unit.id;
+    placement.style.cssText = 'max-width:100%;min-width:0;overflow:hidden;margin:28px 0;text-align:center;box-sizing:border-box;';
+
+    const frame = document.createElement('div');
+    frame.style.cssText = `width:${unit.width}px;height:${unit.height}px;max-width:100%;margin:0 auto;overflow:hidden;`;
+    placement.append(createAdLabel(), frame);
+
+    placement.activateAd = () => {
+      const optionsScript = document.createElement('script');
+      optionsScript.text = `atOptions = {'key' : '${unit.key}', 'format' : '${unit.format}', 'height' : ${unit.height}, 'width' : ${unit.width}, 'params' : {}};`;
+
+      const bannerScript = document.createElement('script');
+      bannerScript.async = false;
+      bannerScript.src = unit.scriptSrc;
+
+      frame.append(optionsScript, bannerScript);
+    };
+    return placement;
+  }
+
+  function createConfiguredArticleAdPlacement(unit) {
+    return unit.type === 'iframe'
+      ? createAdsterraRectanglePlacement(unit)
+      : createAdsterraNativePlacement(unit);
   }
 
   function insertConfiguredArticleAds(root) {
@@ -734,9 +776,11 @@ const LABELS = {
 
     anchors.forEach((anchor, index) => {
       const unit = config.units[index];
-      if (!unit || usedContainerIds.has(unit.containerId) || root.querySelector(`#${unit.containerId}`)) return;
-      usedContainerIds.add(unit.containerId);
-      anchor.insertAdjacentElement('afterend', createAdsterraNativePlacement(unit));
+      if (!unit || usedContainerIds.has(unit.id) || root.querySelector(`[data-ad-unit="${unit.id}"]`)) return;
+      usedContainerIds.add(unit.id);
+      const placement = createConfiguredArticleAdPlacement(unit);
+      anchor.insertAdjacentElement('afterend', placement);
+      placement.activateAd?.();
     });
   }
 
