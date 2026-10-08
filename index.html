@@ -614,12 +614,16 @@ const LABELS = {
 
     const routeArticle = findArticleForCurrentRoute();
     updatePageMetadata(routeArticle);
+    let reusableHomepageNativePlacement = null;
     if (routeArticle) {
+      clearRenderedAdPlacements(leadSlot);
       document.getElementById('homePageMain').hidden = true;
       document.getElementById('articlePageRoot').hidden = false;
       renderArticlePage(routeArticle);
       return;
     } else {
+      clearRenderedAdPlacements(articlePageRoot);
+      reusableHomepageNativePlacement = detachPrimaryNativeAdPlacement(leadSlot);
       document.getElementById('homePageMain').hidden = false;
       document.getElementById('articlePageRoot').hidden = true;
     }
@@ -655,7 +659,7 @@ const LABELS = {
               <div class="byline">${labels.by || 'Par'} <b>${lead.author || 'Staff'}</b> • ${fmtDate(lead.date)}</div>
             </div>
           </article>
-          ${continuationStories.length ? `<section class="hero-continuation" aria-label="Latest stories">
+          ${continuationStories.length ? `<div id="homepageNativeBannerSlot"></div><section class="hero-continuation" aria-label="Latest stories">
             <div class="story-grid-heading"><span></span><h2>${labels.sidebar}</h2></div>
             <div class="hero-continuation__grid">${continuationStories.map(item => {
               const localized = localizedArticle(item);
@@ -669,6 +673,7 @@ const LABELS = {
             }).join('')}</div>
           </section>` : ''}
         </section>      `;
+      insertHomepageNativeBanner(leadSlot, reusableHomepageNativePlacement);
     }
 
     if (gridSlot) {
@@ -722,13 +727,16 @@ const LABELS = {
     const container = document.createElement('div');
     container.id = unit.containerId;
     container.style.cssText = 'max-width:100%;min-width:0;overflow:hidden;';
+    placement.append(createAdLabel(), container);
 
-    const script = document.createElement('script');
-    script.setAttribute('async', 'async');
-    script.setAttribute('data-cfasync', 'false');
-    script.src = unit.scriptSrc;
-
-    placement.append(createAdLabel(), container, script);
+    placement.activateAd = () => {
+      if (placement.querySelector(`script[src="${unit.scriptSrc}"]`)) return;
+      const script = document.createElement('script');
+      script.setAttribute('async', 'async');
+      script.setAttribute('data-cfasync', 'false');
+      script.src = unit.scriptSrc;
+      placement.append(script);
+    };
     return placement;
   }
 
@@ -755,6 +763,29 @@ const LABELS = {
     return placement;
   }
 
+  function getPrimaryNativeAdUnit() {
+    return PUBLIC_AD_PLACEMENTS.IN_ARTICLE_NATIVE.units.find(unit => unit.type === 'native') || null;
+  }
+
+  function clearRenderedAdPlacements(root) {
+    root?.querySelectorAll('[data-ad-unit]').forEach(placement => placement.remove());
+  }
+
+  function detachPrimaryNativeAdPlacement(root) {
+    const unit = getPrimaryNativeAdUnit();
+    const placement = unit ? root?.querySelector(`[data-ad-unit="${unit.id}"]`) : null;
+    if (placement) placement.remove();
+    return placement || null;
+  }
+
+  function insertHomepageNativeBanner(root, existingPlacement = null) {
+    const slot = root?.querySelector('#homepageNativeBannerSlot');
+    const unit = getPrimaryNativeAdUnit();
+    if (!slot || !unit || root.querySelector(`[data-ad-unit="${unit.id}"]`)) return;
+    const placement = existingPlacement || createAdsterraNativePlacement(unit);
+    slot.append(placement);
+    placement.activateAd?.();
+  }
   function createConfiguredArticleAdPlacement(unit) {
     return unit.type === 'iframe'
       ? createAdsterraRectanglePlacement(unit)
